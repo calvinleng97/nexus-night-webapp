@@ -2,7 +2,8 @@ import { loadConfig } from "../config";
 import { newId, newJoinCode, newSeed, normalizeJoinCode, userIdFromGoogleSub } from "../ids";
 import { emptyEvent } from "../domain/event-machine";
 import { eventOrderKey } from "../domain/schedule";
-import type { League, NexusEvent, User, UserId } from "../domain/types";
+import type { Deck, DeckId, League, NexusEvent, User, UserId } from "../domain/types";
+import { parseDecklist, suggestDeckName } from "../domain/deck";
 import {
   appendJsonl,
   ensureDir,
@@ -11,6 +12,7 @@ import {
   withLock,
   writeJsonAtomic,
 } from "./fsjson";
+import { rm } from "node:fs/promises";
 import { paths } from "./paths";
 import { SCHEMA_VERSION, type StoreMeta } from "./schema";
 
@@ -30,6 +32,7 @@ export async function initStore(): Promise<void> {
   await ensureDir(paths.root());
   await ensureDir(paths.usersDir());
   await ensureDir(paths.leaguesDir());
+  await ensureDir(paths.decksDir());
   await ensureDir(paths.eventsDir());
   await ensureDir(paths.locks());
   const meta = await readJson<StoreMeta>(paths.meta());
@@ -58,6 +61,18 @@ async function migrate(from: number): Promise<void> {
       const league = await readJson<League>(file);
       if (!league || league.joinCode) continue;
       await writeJsonAtomic(file, { ...league, joinCode: newJoinCode() });
+    }
+  }
+  if (from < 4) {
+    // v4 introduced EventPlayer.deck. Nobody had registered one before.
+    const files = await listJsonFiles(paths.eventsDir());
+    for (const file of files) {
+      const event = await readJson<NexusEvent>(file);
+      if (!event || !event.players.some((p) => p.deck === undefined)) continue;
+      await writeJsonAtomic(file, {
+        ...event,
+        players: event.players.map((p) => ({ ...p, deck: p.deck ?? null })),
+      });
     }
   }
   if (from < 3) {
@@ -295,6 +310,61 @@ export async function setLeagueManager(
   return league;
 }
 
+// ---------------------------------------------------------------- decks
+
+export async function createDeck(input: {
+  ownerId: UserId;
+  name: string;
+  source: string;
+}): Promise<Deck> {
+  await storeReady();
+  const parsed = parseDecklist(input.source);
+  if (!parsed.ok) throw new Error(parsed.error);
+  const deck: Deck = {
+    id: newId("dk"),
+    ownerId: input.ownerId,
+    name: input.name.trim() || suggestDeckName(parsed.deck),
+    legend: parsed.deck.legend,
+    champions: parsed.deck.champions,
+    mainDeck: parsed.deck.mainDeck,
+    battlefields: parsed.deck.battlefields,
+    runes: parsed.deck.runes,
+    sideboard: parsed.deck.sideboard,
+    source: input.source,
+    createdAt: new Date().toISOString(),
+  };
+  await writeJsonAtomic(paths.deck(deck.id), deck);
+  await audit({ action: "deck_created", deckId: deck.id, actor: input.ownerId });
+  return deck;
+}
+
+export async function getDeck(id: DeckId): Promise<Deck | null> {
+  await storeReady();
+  return readJson<Deck>(paths.deck(id));
+}
+
+export async function listDecksForUser(ownerId: UserId): Promise<Deck[]> {
+  await storeReady();
+  const files = await listJsonFiles(paths.decksDir());
+  const loaded = await Promise.all(files.map((f) => readJson<Deck>(f)));
+  return loaded
+    .filter((d): d is Deck => d !== null && d.ownerId === ownerId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+/**
+ * Delete a deck. Events keep their own snapshot of what was registered, so
+ * past results are unaffected.
+ */
+export async function deleteDeck(id: DeckId, actorId: UserId): Promise<void> {
+  await storeReady();
+  const deck = await readJson<Deck>(paths.deck(id));
+  if (!deck) throw new Error("Deck not found.");
+  if (deck.ownerId !== actorId) throw new Error("That is not your deck.");
+  await rm(paths.deck(id), { force: true });
+  await audit({ action: "deck_deleted", deckId: id, actor: actorId });
+}
+
 // --------------------------------------------------------------- events
 
 export async function createEvent(input: {
@@ -415,7 +485,12 @@ export async function joinEvent(eventId: string, userId: UserId): Promise<NexusE
     if (e.status !== "draft") throw new Error("This event has already started.");
     if (e.players.some((p) => p.userId === userId)) return { event: e, log: { action: "noop" } };
     const next = structuredClone(e);
-    next.players.push({ userId, joinedAt: new Date().toISOString(), droppedAfterRound: null });
+    next.players.push({
+      userId,
+      joinedAt: new Date().toISOString(),
+      deck: null,
+      droppedAfterRound: null,
+    });
     return { event: next, log: { action: "player_joined", userId } };
   });
   return event;

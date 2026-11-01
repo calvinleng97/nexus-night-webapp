@@ -26,6 +26,7 @@ function makeEvent(playerCount: number, rounds = 3): NexusEvent {
   e.players = Array.from({ length: playerCount }, (_, i) => ({
     userId: `p${i}`,
     joinedAt: new Date().toISOString(),
+    deck: null,
     droppedAfterRound: null,
   }));
   return e;

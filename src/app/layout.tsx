@@ -44,6 +44,12 @@ export default async function RootLayout(props: LayoutProps<"/">) {
                     Leagues
                   </Link>
                   <Link
+                    href="/decks"
+                    className="rounded-lg px-2.5 py-1.5 text-fg-dim transition-colors hover:bg-raised hover:text-fg"
+                  >
+                    Decks
+                  </Link>
+                  <Link
                     href="/history"
                     className="rounded-lg px-2.5 py-1.5 text-fg-dim transition-colors hover:bg-raised hover:text-fg"
                   >

@@ -10,12 +10,16 @@ import {
   dropPlayer,
   forceCloseRound,
   setEventDate,
+  setPlayerDeck,
   startEvent,
   submitResult,
 } from "@/lib/domain/event-machine";
 import {
+  createDeck,
   createEvent,
   createLeague,
+  deleteDeck,
+  getDeck,
   joinEvent,
   getLeagueByJoinCode,
   joinLeague,
@@ -132,6 +136,68 @@ export async function removeMemberAction(_prev: ActionState, form: FormData): Pr
     const { warnings } = await removeLeagueMember(leagueId, userId, str(form, "targetId"));
     revalidatePath("/leagues");
     revalidatePath(`/leagues/${leagueId}`);
+    return { ok: true, warnings };
+  });
+}
+
+// -------------------------------------------------------------------- decks
+
+export async function addDeckAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const userId = await requireUserId();
+    const source = typeof form.get("source") === "string" ? (form.get("source") as string) : "";
+    if (source.trim() === "") return fail("Paste a decklist first.");
+    if (source.length > 20_000) return fail("That decklist is implausibly long.");
+    // createDeck throws the parser's message, which names the offending line.
+    await createDeck({ ownerId: userId, name: str(form, "name").slice(0, 80), source });
+    revalidatePath("/decks");
+    return { ok: true };
+  });
+}
+
+export async function deleteDeckAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const userId = await requireUserId();
+    await deleteDeck(str(form, "deckId"), userId);
+    revalidatePath("/decks");
+    return {
+      ok: true,
+      warnings: ["Events you already registered it for keep their own record of it."],
+    };
+  });
+}
+
+/** Register a deck for an event, or clear it with an empty deckId. */
+export async function registerDeckAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const userId = await requireUserId();
+    const eventId = str(form, "eventId");
+    const deckId = str(form, "deckId");
+    const targetId = str(form, "targetId") || userId;
+
+    let registered = null;
+    if (deckId !== "") {
+      const deck = await getDeck(deckId);
+      if (!deck) return fail("That deck no longer exists.");
+      if (deck.ownerId !== targetId) return fail("That deck belongs to someone else.");
+      registered = {
+        deckId: deck.id,
+        name: deck.name,
+        legend: deck.legend,
+        registeredAt: new Date().toISOString(),
+      };
+    }
+
+    const { warnings } = await mutateEvent(eventId, userId, (event) => {
+      const res = setPlayerDeck(event, targetId, userId, registered);
+      if (!res.ok) throw new Error(res.error);
+      return {
+        event: res.value.event,
+        log: { action: "deck_registered", targetId, deckId: deckId || null },
+        warnings: res.value.warnings,
+      };
+    });
+    revalidatePath(`/events/${eventId}`);
     return { ok: true, warnings };
   });
 }

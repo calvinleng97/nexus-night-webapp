@@ -11,10 +11,13 @@ import type { Round, UserId } from "@/lib/domain/types";
 export function Bracket({
   rounds,
   nameOf,
+  legendOf,
   viewerId,
 }: {
   rounds: Round[];
   nameOf: (id: UserId | null) => string;
+  /** Registered Legend for a player, or null if they did not register one. */
+  legendOf: (id: UserId) => string | null;
   viewerId: UserId;
 }) {
   return (
@@ -39,12 +42,19 @@ export function Bracket({
                       className="rounded-xl border border-dashed border-hair bg-surface/60 px-3 py-2.5"
                     >
                       <div className="flex items-center gap-2">
-                        <span
-                          className={`min-w-0 flex-1 truncate text-sm ${
-                            p.a === viewerId ? "text-accent" : "text-fg-dim"
-                          }`}
-                        >
-                          {nameOf(p.a)}
+                        <span className="min-w-0 flex-1">
+                          <span
+                            className={`block truncate text-sm ${
+                              p.a === viewerId ? "text-accent" : "text-fg-dim"
+                            }`}
+                          >
+                            {nameOf(p.a)}
+                          </span>
+                          {legendOf(p.a) ? (
+                            <span className="block truncate text-[0.7rem] text-fg-faint">
+                              {legendOf(p.a)}
+                            </span>
+                          ) : null}
                         </span>
                         <span className="text-[0.7rem] uppercase tracking-wide text-fg-faint">
                           bye
@@ -60,12 +70,22 @@ export function Bracket({
 
                 const row = (id: UserId, games: number | null, won: boolean) => (
                   <div className="flex items-center gap-2">
-                    <span
-                      className={`min-w-0 flex-1 truncate text-sm ${
-                        won ? "font-medium text-fg" : "text-fg-dim"
-                      } ${id === viewerId ? "text-accent" : ""}`}
-                    >
-                      {nameOf(id)}
+                    <span className="min-w-0 flex-1">
+                      <span
+                        className={`block truncate text-sm ${
+                          won ? "font-medium text-fg" : "text-fg-dim"
+                        } ${id === viewerId ? "text-accent" : ""}`}
+                      >
+                        {nameOf(id)}
+                      </span>
+                      {legendOf(id) ? (
+                        <span
+                          title={legendOf(id) ?? undefined}
+                          className="block truncate text-[0.7rem] text-fg-faint"
+                        >
+                          {legendOf(id)}
+                        </span>
+                      ) : null}
                     </span>
                     <span
                       className={`w-4 text-right font-mono text-sm tabular-nums ${

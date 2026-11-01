@@ -4,10 +4,11 @@ import { currentRound, pairingForUser } from "@/lib/domain/event-machine";
 import { computeStandings, recordLabel } from "@/lib/domain/standings";
 import { formatEventDate } from "@/lib/domain/schedule";
 import type { GameScore, NexusEvent, Pairing, User, UserId } from "@/lib/domain/types";
-import { getEvent, getLeague, getUsers } from "@/lib/store/repo";
+import { getEvent, getLeague, getUsers, listDecksForUser } from "@/lib/store/repo";
 import { ActionForm } from "@/components/action-form";
 import { Bracket } from "@/components/bracket";
 import { EventDateControl } from "@/components/event-date";
+import { DeckPicker } from "@/components/deck-picker";
 import { ManagerScoreSelect, ScoreSelect } from "@/components/score-select";
 import {
   BackLink,
@@ -155,10 +156,17 @@ export default async function EventPage(props: PageProps<"/events/[id]">) {
 
   const event = await getEvent(id);
   if (!event) notFound();
-  const [league, users] = await Promise.all([
+  const [league, users, myDecks] = await Promise.all([
     getLeague(event.leagueId),
     getUsers([...event.players.map((p) => p.userId), ...event.managerIds]),
+    listDecksForUser(userId),
   ]);
+  // Registered Legends, snapshotted on the player when they signed up.
+  const legends = new Map(
+    event.players.filter((p) => p.deck?.legend).map((p) => [p.userId, p.deck!.legend!]),
+  );
+  const legendOf = (uid: UserId) => legends.get(uid) ?? null;
+  const myPlayer = event.players.find((p) => p.userId === userId) ?? null;
 
   const nameOf = (uid: UserId | null) =>
     uid ? ((users as Map<UserId, User>).get(uid)?.name ?? "Unknown") : "—";
@@ -248,6 +256,12 @@ export default async function EventPage(props: PageProps<"/events/[id]">) {
             </Card>
           ) : null}
 
+          {isPlayer ? (
+            <div className="mb-7">
+              <DeckPicker eventId={event.id} decks={myDecks} current={myPlayer?.deck ?? null} />
+            </div>
+          ) : null}
+
           <SectionHead count={event.players.length}>Signed up</SectionHead>
           {event.players.length === 0 ? (
             <Empty>Nobody yet.</Empty>
@@ -263,6 +277,9 @@ export default async function EventPage(props: PageProps<"/events/[id]">) {
                   }`}
                 >
                   {nameOf(p.userId)}
+                  {p.deck?.legend ? (
+                    <span className="ml-1.5 text-fg-faint">{p.deck.legend}</span>
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -284,6 +301,9 @@ export default async function EventPage(props: PageProps<"/events/[id]">) {
               </p>
             </Card>
           )}
+          {isPlayer ? (
+            <DeckPicker eventId={event.id} decks={myDecks} current={myPlayer?.deck ?? null} />
+          ) : null}
           <div className="flex flex-wrap gap-2 px-0.5">
             {open.length === 0 ? (
               <Tag tone="accent">All results in</Tag>
@@ -329,6 +349,11 @@ export default async function EventPage(props: PageProps<"/events/[id]">) {
                       >
                         {nameOf(s.userId)}
                       </span>
+                      {legendOf(s.userId) ? (
+                        <span className="block truncate text-[0.7rem] text-fg-faint">
+                          {legendOf(s.userId)}
+                        </span>
+                      ) : null}
                       {s.byes > 0 ? (
                         <span className="ml-2">
                           <Badge>bye</Badge>
@@ -353,7 +378,12 @@ export default async function EventPage(props: PageProps<"/events/[id]">) {
       {event.rounds.length > 0 ? (
         <div className="mb-9">
           <SectionHead>Bracket</SectionHead>
-          <Bracket rounds={event.rounds} nameOf={nameOf} viewerId={userId} />
+          <Bracket
+            rounds={event.rounds}
+            nameOf={nameOf}
+            legendOf={legendOf}
+            viewerId={userId}
+          />
         </div>
       ) : null}
 
