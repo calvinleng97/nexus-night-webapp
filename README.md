@@ -245,6 +245,11 @@ sudo ufw allow 80/tcp && sudo ufw allow 443/tcp
 
 ## Deploying on push
 
+**`main` is what is deployed.** Work on a feature branch, open a pull request
+into `main`, and merging it ships. Nothing else deploys, and `main` should
+never be pushed to directly with anything you would not want live within the
+minute.
+
 Two options ship in `deploy/`. Both run the same `deploy/deploy.sh`, which is
 idempotent, rebuilds, restarts, health-checks, and **rolls back to the previous
 commit if the build or the health check fails** — so a bad push cannot leave
@@ -292,7 +297,7 @@ private key as a repository secret. It needs:
 
 - a key whose public half is in the box's `root` `authorized_keys`, ideally
   behind a forced command so the key can only deploy:
-  `command="/srv/nexus-night/app/deploy/deploy.sh scaffold-swiss-webapp",no-pty,no-port-forwarding,...`
+  `command="/srv/nexus-night/app/deploy/deploy.sh main",no-pty,no-port-forwarding,...`
 - repository secrets `DEPLOY_SSH_KEY`, `DEPLOY_HOST`, `DEPLOY_KNOWN_HOSTS`
 
 ---

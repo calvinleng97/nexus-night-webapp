@@ -2,14 +2,14 @@
 #
 # Deploy whatever origin/<branch> currently points at, onto this box.
 #
-#   sudo /srv/nexus-night/app/deploy/deploy.sh [branch]
+#   sudo /srv/nexus-night/app/deploy/deploy.sh [branch]   # defaults to main
 #
 # Safe to run repeatedly: it exits early when already on the target commit.
 # If the build or the post-restart health check fails, it puts the previous
 # commit back and restarts, so a bad push cannot leave the site down.
 set -euo pipefail
 
-BRANCH="${1:-scaffold-swiss-webapp}"
+BRANCH="${1:-main}"
 APP=/srv/nexus-night/app
 SERVICE=nexus-night
 RUN_AS=nexus
@@ -50,14 +50,16 @@ log "deploying $TARGET"
 
 rollback() {
   log "ROLLING BACK to $PREV"
-  app "git reset --hard --quiet '$PREV'"
+  app "git checkout -q -B '$BRANCH' '$PREV'"
   app "npm ci --no-audit --no-fund --silent" || log "rollback npm ci failed"
   build || log "rollback build failed — the service may be degraded"
   systemctl restart "$SERVICE" || true
   if healthy; then log "rollback healthy"; else log "ROLLBACK UNHEALTHY — needs a human"; fi
 }
 
-app "git reset --hard --quiet '$TARGET'"
+# checkout -B rather than reset --hard, so the local branch name on the box
+# actually matches the branch being deployed instead of whatever it was before.
+app "git checkout -q -B '$BRANCH' '$TARGET'"
 
 if ! app "npm ci --no-audit --no-fund --silent"; then
   log "npm ci failed"; rollback; exit 1
