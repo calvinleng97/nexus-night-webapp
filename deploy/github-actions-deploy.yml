@@ -9,7 +9,7 @@ name: Deploy
 # Pushes to the deployment branch are verified, then shipped to the box.
 on:
   push:
-    branches: [scaffold-swiss-webapp]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:

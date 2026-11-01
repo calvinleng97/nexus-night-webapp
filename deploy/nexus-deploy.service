@@ -8,6 +8,6 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/srv/nexus-night/app/deploy/deploy.sh scaffold-swiss-webapp
+ExecStart=/srv/nexus-night/app/deploy/deploy.sh main
 # deploy.sh exits 0 immediately when the branch has not moved.
 TimeoutStartSec=900
