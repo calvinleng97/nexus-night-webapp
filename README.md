@@ -15,9 +15,18 @@ while it's in `draft`, a manager starts it, and the app pairs **3 rounds** of Sw
 (configurable per event).
 
 Each match is a best-of-three. One player submits the score, the opponent confirms
-it, and once every match in the round is confirmed the next round is paired
-automatically and everyone sees their new opponent. Managers can override any
-result, drop a player, or force a round closed.
+it, and **once the last match in a round is confirmed the next round is paired in
+that same action** — nobody has to start a round. The confirming player's own
+request is what generates the pairings, so every player sees their new opponent
+on their next page load.
+
+Managers never need to intervene in the normal flow. They can override a result,
+resolve a dispute, drop a player, force a round closed when a match will not be
+played, and remove someone from the league.
+
+Removing a player from a league does not touch events: dropping them mid-event
+forfeits their current match, which is too large a side effect to trigger
+implicitly, so the manager is warned to do that separately if they want it.
 
 **Standings are records only.** Equal records share a rank and no champion is
 crowned — but every game score is stored, so tiebreakers like opponent match-win %
@@ -114,6 +123,7 @@ npx tsx scripts/stats.ts          # example stats read over the data directory
 npx tsx scripts/demo.ts 7         # play a full night and print every step
 npx tsx scripts/seed-history.ts   # seed finished events so History/Elo have data
 npx tsx scripts/seed-history.ts --events=5 --players=10 --skill=-1
+npx tsx scripts/live-event.ts     # park an event mid-round to inspect player views
 ```
 
 ---
@@ -284,5 +294,6 @@ scripts/simulate.ts               pairing probe
 scripts/stats.ts                  example stats reader
 scripts/demo.ts                   plays a full night end to end
 scripts/seed-history.ts           seeds finished events for History and Elo
+scripts/live-event.ts             parks an event mid-round for UI inspection
 deploy/                           Caddyfile, systemd unit
 ```

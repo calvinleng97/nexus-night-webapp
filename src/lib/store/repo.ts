@@ -166,6 +166,48 @@ export async function leaveLeague(leagueId: string, userId: UserId): Promise<Lea
   return league;
 }
 
+/**
+ * Remove someone from a league. Manager-only.
+ *
+ * League membership and event participation are separate: this does not touch
+ * events, because dropping a player mid-event forfeits their current match,
+ * which is too large a side effect to trigger implicitly. If they are still
+ * active somewhere, the returned warning says so.
+ */
+export async function removeLeagueMember(
+  leagueId: string,
+  actorId: UserId,
+  targetId: UserId,
+): Promise<{ league: League; warnings: string[] }> {
+  await storeReady();
+  if (actorId === targetId) throw new Error('Use "Leave league" to remove yourself.');
+  const league = await mutateLeague(leagueId, (l) => {
+    if (!l.managerIds.includes(actorId))
+      throw new Error("Only a league manager can remove players.");
+    if (l.createdBy === targetId) throw new Error("The league creator cannot be removed.");
+    if (!l.memberIds.includes(targetId)) throw new Error("That person is not a league member.");
+    return {
+      ...l,
+      memberIds: l.memberIds.filter((m) => m !== targetId),
+      managerIds: l.managerIds.filter((m) => m !== targetId),
+    };
+  });
+
+  const warnings: string[] = [];
+  const live = (await listEventsForLeague(leagueId)).filter(
+    (e) =>
+      e.status === "running" &&
+      e.players.some((p) => p.userId === targetId && p.droppedAfterRound === null),
+  );
+  if (live.length > 0)
+    warnings.push(
+      `They are still playing in ${live.length} event${live.length === 1 ? "" : "s"} in progress. ` +
+        "Drop them there too if they should stop.",
+    );
+  await audit({ action: "league_member_removed", leagueId, actor: actorId, targetId });
+  return { league, warnings };
+}
+
 export async function setLeagueManager(
   leagueId: string,
   actorId: UserId,

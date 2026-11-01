@@ -21,6 +21,7 @@ import {
   createEventAction,
   joinLeagueAction,
   leaveLeagueAction,
+  removeMemberAction,
   setManagerAction,
 } from "../../actions";
 
@@ -269,6 +270,14 @@ export default async function LeaguePage(props: PageProps<"/leagues/[id]">) {
                       }}
                       label={memberIsManager ? "Demote" : "Make manager"}
                       variant="ghost"
+                      compact
+                    />
+                    <ActionForm
+                      action={removeMemberAction}
+                      fields={{ leagueId: league.id, targetId: m }}
+                      label="Remove"
+                      variant="danger"
+                      confirm="Remove from league"
                       compact
                     />
                   </li>

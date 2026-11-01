@@ -137,6 +137,69 @@ describe("file store round-trip", () => {
     expect(new Set(loaded.players.map((p) => p.userId)).size).toBe(4);
   });
 
+  it("lets a manager remove a member, but not the creator or themselves", async () => {
+    const owner = await makeUser("sub-kick-o", "KickOwner");
+    const helper = await makeUser("sub-kick-h", "Helper");
+    const victim = await makeUser("sub-kick-v", "Victim");
+    const league = await repo.createLeague({ name: "Kickable", createdBy: owner.id });
+    await repo.joinLeague(league.id, helper.id);
+    await repo.joinLeague(league.id, victim.id);
+
+    // A plain member cannot remove anyone.
+    await expect(repo.removeLeagueMember(league.id, helper.id, victim.id)).rejects.toThrow(
+      /league manager/i,
+    );
+    // The creator is protected even from themselves being removed by a manager.
+    await repo.setLeagueManager(league.id, owner.id, helper.id, true);
+    await expect(repo.removeLeagueMember(league.id, helper.id, owner.id)).rejects.toThrow(
+      /creator cannot be removed/i,
+    );
+    // Removing yourself goes through "leave" instead.
+    await expect(repo.removeLeagueMember(league.id, owner.id, owner.id)).rejects.toThrow(
+      /Leave league/i,
+    );
+
+    const { league: after, warnings } = await repo.removeLeagueMember(
+      league.id,
+      owner.id,
+      victim.id,
+    );
+    expect(after.memberIds).not.toContain(victim.id);
+    expect(warnings).toHaveLength(0);
+
+    // Removing a manager strips the manager role along with membership.
+    const { league: afterHelper } = await repo.removeLeagueMember(league.id, owner.id, helper.id);
+    expect(afterHelper.memberIds).not.toContain(helper.id);
+    expect(afterHelper.managerIds).not.toContain(helper.id);
+
+    // And a non-member cannot be removed twice.
+    await expect(repo.removeLeagueMember(league.id, owner.id, victim.id)).rejects.toThrow(
+      /not a league member/i,
+    );
+  });
+
+  it("warns when the removed player is still active in a running event", async () => {
+    const owner = await makeUser("sub-kick2-o", "Kick2Owner");
+    const players = await Promise.all(
+      [0, 1, 2, 3].map((i) => makeUser(`sub-kick2-p${i}`, `K2P${i}`)),
+    );
+    const league = await repo.createLeague({ name: "Live", createdBy: owner.id });
+    for (const p of players) await repo.joinLeague(league.id, p.id);
+    let event = await repo.createEvent({ leagueId: league.id, name: "Live night", createdBy: owner.id });
+    for (const p of players) event = await repo.joinEvent(event.id, p.id);
+    await repo.mutateEvent(event.id, owner.id, (e) => {
+      const res = startEvent(e, owner.id);
+      if (!res.ok) throw new Error(res.error);
+      return { event: res.value.event, log: { action: "event_started" } };
+    });
+
+    const { warnings } = await repo.removeLeagueMember(league.id, owner.id, players[0]!.id);
+    expect(warnings.join(" ")).toMatch(/still playing in 1 event/i);
+    // The event itself is untouched: their results and pairing remain.
+    const live = (await repo.getEvent(event.id))!;
+    expect(live.players.some((p) => p.userId === players[0]!.id)).toBe(true);
+  });
+
   it("writes nothing outside the configured data directory", async () => {
     const entries = await readdir(dataDir);
     expect(new Set(entries)).toEqual(new Set(["users", "leagues", "events", "log", ".locks", "meta.json"]));

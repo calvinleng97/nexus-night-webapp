@@ -19,6 +19,7 @@ import {
   leaveEvent,
   leaveLeague,
   mutateEvent,
+  removeLeagueMember,
   setLeagueManager,
 } from "@/lib/store/repo";
 
@@ -87,6 +88,17 @@ export async function setManagerAction(_prev: ActionState, form: FormData): Prom
     await setLeagueManager(leagueId, userId, str(form, "targetId"), str(form, "make") === "1");
     revalidatePath(`/leagues/${leagueId}`);
     return { ok: true };
+  });
+}
+
+export async function removeMemberAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const userId = await requireUserId();
+    const leagueId = str(form, "leagueId");
+    const { warnings } = await removeLeagueMember(leagueId, userId, str(form, "targetId"));
+    revalidatePath("/leagues");
+    revalidatePath(`/leagues/${leagueId}`);
+    return { ok: true, warnings };
   });
 }
 
