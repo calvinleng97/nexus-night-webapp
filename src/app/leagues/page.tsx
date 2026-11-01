@@ -3,7 +3,16 @@ import { redirect } from "next/navigation";
 import { currentUserId } from "@/lib/auth";
 import { listAllEvents, listLeagues } from "@/lib/store/repo";
 import { ActionForm } from "@/components/action-form";
-import { Badge, Card, Empty, Field, PageTitle, SectionHead, inputClass } from "@/components/ui";
+import {
+  Badge,
+  Card,
+  CountPill,
+  Empty,
+  Field,
+  PageTitle,
+  SectionHead,
+  inputClass,
+} from "@/components/ui";
 import { createLeagueAction, joinLeagueAction } from "../actions";
 
 export default async function LeaguesPage(props: PageProps<"/leagues">) {
@@ -70,24 +79,33 @@ export default async function LeaguesPage(props: PageProps<"/leagues">) {
         </Empty>
       ) : (
         <ul className="space-y-2.5">
-          {mine.map((l) => (
-            <Card as="li" key={l.id} interactive>
-              <Link href={`/leagues/${l.id}`} className="flex items-center gap-3 p-4">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{l.name}</p>
-                  <p className="mt-0.5 text-sm text-fg-faint">
-                    {eventCount.get(l.id) ?? 0} event{(eventCount.get(l.id) ?? 0) === 1 ? "" : "s"}
-                    {" · "}
-                    {l.memberIds.length} player{l.memberIds.length === 1 ? "" : "s"}
-                  </p>
-                </div>
-                {l.managerIds.includes(userId) ? <Badge tone="accent">Manager</Badge> : null}
-                <span aria-hidden className="text-fg-faint">
-                  →
-                </span>
-              </Link>
-            </Card>
-          ))}
+          {mine.map((l) => {
+            const n = eventCount.get(l.id) ?? 0;
+            return (
+              <Card as="li" key={l.id} interactive>
+                <Link href={`/leagues/${l.id}`} className="block p-4">
+                  <div className="flex items-center gap-3">
+                    <p className="min-w-0 flex-1 truncate font-medium">{l.name}</p>
+                    {l.managerIds.includes(userId) ? <Badge tone="accent">★ Manager</Badge> : null}
+                    <span aria-hidden className="text-fg-faint">
+                      →
+                    </span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <CountPill
+                      value={n}
+                      label={n === 1 ? "event" : "events"}
+                      tone={n > 0 ? "accent" : "plain"}
+                    />
+                    <CountPill
+                      value={l.memberIds.length}
+                      label={l.memberIds.length === 1 ? "player" : "players"}
+                    />
+                  </div>
+                </Link>
+              </Card>
+            );
+          })}
         </ul>
       )}
 
@@ -96,20 +114,22 @@ export default async function LeaguesPage(props: PageProps<"/leagues">) {
           <SectionHead>Open to join</SectionHead>
           <ul className="space-y-2">
             {others.map((l) => (
-              <li key={l.id} className="flex items-center gap-3 px-1 py-2">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm">{l.name}</p>
-                  <p className="text-xs text-fg-faint">
-                    {l.memberIds.length} player{l.memberIds.length === 1 ? "" : "s"}
-                  </p>
+              <Card as="li" key={l.id} tone="raised">
+                <div className="flex flex-wrap items-center gap-3 p-3.5">
+                  <p className="min-w-0 flex-1 truncate text-sm font-medium">{l.name}</p>
+                  <CountPill
+                    value={l.memberIds.length}
+                    label={l.memberIds.length === 1 ? "player" : "players"}
+                  />
+                  <ActionForm
+                    action={joinLeagueAction}
+                    fields={{ leagueId: l.id }}
+                    label="Join"
+                    variant="primary"
+                    compact
+                  />
                 </div>
-                <ActionForm
-                  action={joinLeagueAction}
-                  fields={{ leagueId: l.id }}
-                  label="Join"
-                  compact
-                />
-              </li>
+              </Card>
             ))}
           </ul>
         </div>

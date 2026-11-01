@@ -8,10 +8,12 @@ import {
   BackLink,
   Badge,
   Card,
+  CountPill,
   Empty,
   Field,
   PageTitle,
   SectionHead,
+  Tag,
   inputClass,
 } from "@/components/ui";
 import {
@@ -22,7 +24,6 @@ import {
 } from "../../actions";
 
 const STATUS_TONE = { draft: "neutral", running: "accent", complete: "win" } as const;
-const STATUS_LABEL = { draft: "Open for signups", running: "In progress", complete: "Finished" };
 
 export default async function LeaguePage(props: PageProps<"/leagues/[id]">) {
   const { id } = await props.params;
@@ -45,11 +46,7 @@ export default async function LeaguePage(props: PageProps<"/leagues/[id]">) {
     <div>
       <BackLink href="/leagues">Leagues</BackLink>
       <div className="mt-3">
-        <PageTitle
-          meta={`${league.memberIds.length} player${league.memberIds.length === 1 ? "" : "s"}`}
-        >
-          {league.name}
-        </PageTitle>
+        <PageTitle>{league.name}</PageTitle>
       </div>
 
       {!isMember ? (
@@ -140,21 +137,32 @@ export default async function LeaguePage(props: PageProps<"/leagues/[id]">) {
         <ul className="space-y-2.5">
           {events.map((e) => (
             <Card as="li" key={e.id} interactive tone={e.status === "running" ? "accent" : "plain"}>
-              <Link href={`/events/${e.id}`} className="flex items-center gap-3 p-4">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{e.name}</p>
-                  <p className="mt-0.5 text-sm text-fg-faint">
-                    {STATUS_LABEL[e.status]}
-                    {" · "}
-                    {e.players.length} player{e.players.length === 1 ? "" : "s"}
-                  </p>
+              <Link href={`/events/${e.id}`} className="block p-4">
+                <div className="flex items-center gap-3">
+                  <p className="min-w-0 flex-1 truncate font-medium">{e.name}</p>
+                  <Badge tone={STATUS_TONE[e.status]}>
+                    {e.status === "running"
+                      ? `Round ${e.rounds.length}`
+                      : e.status === "complete"
+                        ? "Final"
+                        : "Draft"}
+                  </Badge>
+                  <span aria-hidden className="text-fg-faint">
+                    →
+                  </span>
                 </div>
-                <Badge tone={STATUS_TONE[e.status]}>
-                  {e.status === "running" ? `R${e.rounds.length}` : e.status}
-                </Badge>
-                <span aria-hidden className="text-fg-faint">
-                  →
-                </span>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {e.players.length === 0 ? (
+                    <Tag tone="warn">Needs players</Tag>
+                  ) : (
+                    <CountPill
+                      value={e.players.length}
+                      label={e.players.length === 1 ? "player" : "players"}
+                      tone={e.status === "running" ? "accent" : "plain"}
+                    />
+                  )}
+                  <CountPill value={e.totalRounds} label="rounds" />
+                </div>
               </Link>
             </Card>
           ))}
@@ -225,13 +233,13 @@ export default async function LeaguePage(props: PageProps<"/leagues/[id]">) {
         ) : null}
 
         {isMember && league.createdBy !== userId ? (
-          <div className="mt-6">
+          <div className="mt-8 border-t border-hair-soft pt-6">
             <ActionForm
               action={leaveLeagueAction}
               fields={{ leagueId: league.id }}
               label="Leave league"
-              variant="ghost"
-              confirm="Really leave?"
+              variant="danger"
+              confirm="Confirm leave"
               compact
             />
           </div>

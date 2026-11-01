@@ -68,14 +68,15 @@ export function BackLink({ href, children }: { href: string; children: ReactNode
   );
 }
 
-export function PageTitle({ children, meta }: { children: ReactNode; meta?: ReactNode }) {
+/**
+ * Page heading. Intentionally has no metadata slot — counts and states belong
+ * in CountPill/Tag chips, not in a muted line under the title.
+ */
+export function PageTitle({ children }: { children: ReactNode }) {
   return (
-    <div className="mb-6">
-      <h1 className="text-[1.6rem] font-semibold leading-tight tracking-[-0.01em] text-balance sm:text-3xl">
-        {children}
-      </h1>
-      {meta ? <div className="mt-1.5 text-sm text-fg-dim">{meta}</div> : null}
-    </div>
+    <h1 className="mb-6 text-[1.6rem] font-semibold leading-tight tracking-[-0.01em] text-balance sm:text-3xl">
+      {children}
+    </h1>
   );
 }
 
@@ -119,7 +120,7 @@ export function Field({ label, children }: { label: string; children: ReactNode 
 }
 
 export const inputClass =
-  "w-full rounded-xl border border-hair bg-base px-3.5 py-2.5 text-base text-fg outline-none placeholder:text-fg-faint/70 focus:border-accent/50";
+  "w-full rounded-xl border border-hair bg-ink px-3.5 py-2.5 text-base text-fg outline-none placeholder:text-fg-faint/70 focus:border-accent/50";
 
 /** Monospace score, so columns of results line up. */
 export function Score({ mine, theirs }: { mine: number; theirs: number }) {
@@ -128,5 +129,67 @@ export function Score({ mine, theirs }: { mine: number; theirs: number }) {
     <span className={`font-mono text-sm tabular-nums ${tone}`}>
       {mine}–{theirs}
     </span>
+  );
+}
+
+const PILL_TONES = {
+  plain: "border-hair bg-raised",
+  accent: "border-accent/35 bg-accent/10",
+  warn: "border-draw/35 bg-draw/10",
+} as const;
+
+/**
+ * A figure with its unit, as one deliberate chip.
+ *
+ * This exists so counts never appear as a muted sentence under a heading —
+ * "1 event · 8 players" reads as throwaway metadata, whereas a chip reads as
+ * information the page means to show you.
+ */
+export function CountPill({
+  value,
+  label,
+  tone = "plain",
+}: {
+  value: number | string;
+  label: string;
+  tone?: keyof typeof PILL_TONES;
+}) {
+  const valueTone = tone === "accent" ? "text-accent" : tone === "warn" ? "text-draw" : "text-fg";
+  return (
+    <span
+      className={`inline-flex items-baseline gap-1.5 rounded-lg border px-2.5 py-1 ${PILL_TONES[tone]}`}
+    >
+      <span className={`font-mono text-sm font-medium tabular-nums ${valueTone}`}>{value}</span>
+      <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-fg-faint">
+        {label}
+      </span>
+    </span>
+  );
+}
+
+/** A standalone stylized label, for states that have no number attached. */
+export function Tag({
+  children,
+  tone = "plain",
+}: {
+  children: ReactNode;
+  tone?: keyof typeof PILL_TONES;
+}) {
+  const textTone = tone === "accent" ? "text-accent" : tone === "warn" ? "text-draw" : "text-fg-dim";
+  return (
+    <span
+      className={`inline-flex items-center rounded-lg border px-2.5 py-1 text-[0.7rem] font-semibold uppercase tracking-wider ${PILL_TONES[tone]} ${textTone}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+/** Small all-caps label that reads as design, not as muted metadata. */
+export function MicroLabel({ children }: { children: ReactNode }) {
+  return (
+    <p className="text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-fg-faint">
+      {children}
+    </p>
   );
 }

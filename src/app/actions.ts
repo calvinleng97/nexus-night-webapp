@@ -65,7 +65,7 @@ export async function joinLeagueAction(_prev: ActionState, form: FormData): Prom
     await joinLeague(leagueId, userId);
     revalidatePath("/leagues");
     revalidatePath(`/leagues/${leagueId}`);
-    return { ok: true, message: "Joined." };
+    return { ok: true };
   });
 }
 
@@ -76,7 +76,7 @@ export async function leaveLeagueAction(_prev: ActionState, form: FormData): Pro
     await leaveLeague(leagueId, userId);
     revalidatePath("/leagues");
     revalidatePath(`/leagues/${leagueId}`);
-    return { ok: true, message: "Left the league." };
+    return { ok: true };
   });
 }
 
@@ -86,7 +86,7 @@ export async function setManagerAction(_prev: ActionState, form: FormData): Prom
     const leagueId = str(form, "leagueId");
     await setLeagueManager(leagueId, userId, str(form, "targetId"), str(form, "make") === "1");
     revalidatePath(`/leagues/${leagueId}`);
-    return { ok: true, message: "Managers updated." };
+    return { ok: true };
   });
 }
 
@@ -114,7 +114,7 @@ export async function joinEventAction(_prev: ActionState, form: FormData): Promi
     const eventId = str(form, "eventId");
     await joinEvent(eventId, userId);
     revalidatePath(`/events/${eventId}`);
-    return { ok: true, message: "You're in." };
+    return { ok: true };
   });
 }
 
@@ -124,7 +124,7 @@ export async function leaveEventAction(_prev: ActionState, form: FormData): Prom
     const eventId = str(form, "eventId");
     await leaveEvent(eventId, userId);
     revalidatePath(`/events/${eventId}`);
-    return { ok: true, message: "You left the event." };
+    return { ok: true };
   });
 }
 
@@ -142,7 +142,7 @@ export async function startEventAction(_prev: ActionState, form: FormData): Prom
       };
     });
     revalidatePath(`/events/${eventId}`);
-    return { ok: true, message: "Round 1 is paired.", warnings };
+    return { ok: true, warnings };
   });
 }
 
@@ -167,7 +167,7 @@ export async function submitScoreAction(_prev: ActionState, form: FormData): Pro
       };
     });
     revalidatePath(`/events/${eventId}`);
-    return { ok: true, message: "Submitted — waiting on your opponent to confirm.", warnings };
+    return { ok: true, warnings };
   });
 }
 
@@ -186,7 +186,7 @@ export async function confirmScoreAction(_prev: ActionState, form: FormData): Pr
       };
     });
     revalidatePath(`/events/${eventId}`);
-    return { ok: true, message: "Result confirmed.", warnings };
+    return { ok: true, warnings };
   });
 }
 
@@ -205,7 +205,7 @@ export async function disputeScoreAction(_prev: ActionState, form: FormData): Pr
       };
     });
     revalidatePath(`/events/${eventId}`);
-    return { ok: true, message: "Flagged for a manager.", warnings };
+    return { ok: true, warnings };
   });
 }
 
@@ -224,7 +224,7 @@ export async function dropPlayerAction(_prev: ActionState, form: FormData): Prom
       };
     });
     revalidatePath(`/events/${eventId}`);
-    return { ok: true, message: "Player dropped.", warnings };
+    return { ok: true, warnings };
   });
 }
 
@@ -242,6 +242,6 @@ export async function forceCloseRoundAction(_prev: ActionState, form: FormData):
       };
     });
     revalidatePath(`/events/${eventId}`);
-    return { ok: true, message: "Round closed.", warnings };
+    return { ok: true, warnings };
   });
 }

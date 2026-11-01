@@ -15,6 +15,7 @@ export function ActionForm({
   fields,
   label,
   variant = "default",
+  size = "md",
   confirm,
   children,
   className = "",
@@ -23,7 +24,8 @@ export function ActionForm({
   action: Action;
   fields?: Record<string, string | number>;
   label: string;
-  variant?: "default" | "primary" | "danger" | "ghost";
+  variant?: "default" | "primary" | "solid" | "danger" | "ghost";
+  size?: "md" | "lg";
   confirm?: string;
   children?: ReactNode;
   className?: string;
@@ -33,11 +35,17 @@ export function ActionForm({
   const [armed, setArmed] = useState(false);
 
   const base =
-    "inline-flex items-center justify-center gap-2 rounded-xl border px-3.5 py-2 text-sm font-medium transition-colors disabled:opacity-50";
+    "inline-flex items-center justify-center gap-2 rounded-xl border font-medium transition-colors disabled:opacity-50";
+  const sizes = {
+    md: "px-3.5 py-2 text-sm",
+    lg: "w-full px-5 py-3.5 text-[0.95rem] font-semibold",
+  } as const;
   const variants = {
     default: "border-hair bg-raised text-fg hover:border-accent/40",
     primary: "border-accent/40 bg-accent/10 text-accent hover:bg-accent/20",
-    danger: "border-loss/40 bg-loss/10 text-loss hover:bg-loss/20",
+    // The strongest call to action on a page: filled, dark text on gold.
+    solid: "border-accent bg-accent text-ink hover:bg-accent/90",
+    danger: "border-loss/45 bg-loss/10 text-loss hover:bg-loss/20",
     ghost: "border-transparent text-fg-faint hover:text-fg",
   } as const;
 
@@ -51,7 +59,9 @@ export function ActionForm({
         type={confirm && !armed ? "button" : "submit"}
         onClick={confirm && !armed ? () => setArmed(true) : undefined}
         disabled={pending}
-        className={`${base} ${variants[armed ? "danger" : variant]} ${compact ? "" : "w-full sm:w-auto"}`}
+        className={`${base} ${sizes[size]} ${variants[armed ? "danger" : variant]} ${
+          compact || size === "lg" ? "" : "w-full sm:w-auto"
+        }`}
       >
         {pending ? "Working…" : armed ? confirm : label}
       </button>
@@ -68,9 +78,6 @@ export function ActionForm({
         <p role="alert" className="mt-2 text-sm text-loss">
           {state.message}
         </p>
-      ) : null}
-      {state.ok && state.message ? (
-        <p className="mt-2 text-sm text-win">{state.message}</p>
       ) : null}
       {state.warnings?.length ? (
         <ul className="mt-2 space-y-1 text-sm text-draw">

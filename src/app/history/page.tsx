@@ -3,8 +3,8 @@ import { redirect } from "next/navigation";
 import { currentUserId } from "@/lib/auth";
 import { matchHistory, recordString, summarize } from "@/lib/domain/history";
 import type { UserId } from "@/lib/domain/types";
-import { getUsers, listEventsForUser, listLeagues } from "@/lib/store/repo";
-import { Badge, Card, Empty, PageTitle, Score, SectionHead } from "@/components/ui";
+import { getUsers, listEventsForUser } from "@/lib/store/repo";
+import { Badge, Card, CountPill, Empty, PageTitle, Score, SectionHead, Tag } from "@/components/ui";
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
@@ -31,8 +31,6 @@ export default async function HistoryPage() {
   const entries = matchHistory(events, userId);
   const totals = summarize(entries);
 
-  const leagues = await listLeagues();
-  const leagueName = new Map(leagues.map((l) => [l.id, l.name]));
   const users = await getUsers(
     entries.map((e) => e.opponentId).filter((x): x is UserId => x !== null),
   );
@@ -53,11 +51,11 @@ export default async function HistoryPage() {
     );
 
   // Group by event, preserving the newest-first order of the entries.
-  const byEvent: Array<{ id: string; name: string; leagueId: string; rows: typeof entries }> = [];
+  const byEvent: Array<{ id: string; name: string; rows: typeof entries }> = [];
   for (const e of entries) {
     const last = byEvent[byEvent.length - 1];
     if (last && last.id === e.eventId) last.rows.push(e);
-    else byEvent.push({ id: e.eventId, name: e.eventName, leagueId: e.leagueId, rows: [e] });
+    else byEvent.push({ id: e.eventId, name: e.eventName, rows: [e] });
   }
 
   return (
@@ -76,10 +74,18 @@ export default async function HistoryPage() {
           />
           <Stat label="Events" value={String(totals.events)} />
         </div>
-        <div className="border-t border-hair-soft px-4 py-2.5 text-xs text-fg-faint">
-          {totals.matches} match{totals.matches === 1 ? "" : "es"} played ·{" "}
-          {totals.opponents} distinct opponent{totals.opponents === 1 ? "" : "s"}
-          {totals.byes > 0 ? ` · ${totals.byes} bye${totals.byes === 1 ? "" : "s"}` : ""}
+        <div className="flex flex-wrap gap-2 border-t border-hair-soft px-4 py-3">
+          <CountPill
+            value={totals.matches}
+            label={totals.matches === 1 ? "match" : "matches"}
+          />
+          <CountPill
+            value={totals.opponents}
+            label={totals.opponents === 1 ? "opponent" : "opponents"}
+          />
+          {totals.byes > 0 ? (
+            <CountPill value={totals.byes} label={totals.byes === 1 ? "bye" : "byes"} />
+          ) : null}
         </div>
       </Card>
 
@@ -100,9 +106,6 @@ export default async function HistoryPage() {
               <Link href={`/events/${group.id}`} className="hover:text-fg-dim">
                 {group.name}
               </Link>
-              <span className="ml-1.5 font-normal normal-case tracking-normal text-fg-faint/70">
-                {leagueName.get(group.leagueId) ?? ""}
-              </span>
             </SectionHead>
 
             <Card className="overflow-hidden">
@@ -125,7 +128,7 @@ export default async function HistoryPage() {
                         )}
                       </span>
                       {r.result === "pending" ? (
-                        <span className="text-xs text-fg-faint">not reported</span>
+                        <Tag>Not reported</Tag>
                       ) : r.result === "bye" ? (
                         <Badge tone="accent">bye</Badge>
                       ) : (

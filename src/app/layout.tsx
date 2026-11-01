@@ -24,7 +24,7 @@ export default async function RootLayout(props: LayoutProps<"/">) {
   return (
     <html lang="en">
       <body className="min-h-dvh">
-        <header className="sticky top-0 z-20 border-b border-hair-soft bg-base/85 backdrop-blur-md">
+        <header className="sticky top-0 z-20 border-b border-hair-soft bg-ink/85 backdrop-blur-md">
           <div className="mx-auto flex h-14 max-w-3xl items-center gap-5 px-4 sm:px-6">
             <Link
               href={signedIn ? "/leagues" : "/"}

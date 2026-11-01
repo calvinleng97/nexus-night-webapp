@@ -7,7 +7,18 @@ import { getEvent, getLeague, getUsers } from "@/lib/store/repo";
 import { ActionForm } from "@/components/action-form";
 import { Bracket } from "@/components/bracket";
 import { ManagerScoreSelect, ScoreSelect } from "@/components/score-select";
-import { BackLink, Badge, Card, Empty, PageTitle, Score, SectionHead } from "@/components/ui";
+import {
+  BackLink,
+  Badge,
+  Card,
+  CountPill,
+  Empty,
+  MicroLabel,
+  PageTitle,
+  Score,
+  SectionHead,
+  Tag,
+} from "@/components/ui";
 import {
   confirmScoreAction,
   disputeScoreAction,
@@ -61,8 +72,12 @@ function MyMatch({
         </p>
         {pairing.rematch ? <Badge tone="draw">rematch</Badge> : null}
       </div>
-      <p className="mt-2 text-sm text-fg-dim">You play</p>
-      <p className="text-2xl font-semibold leading-tight tracking-tight">{nameOf(opponent)}</p>
+      <div className="mt-3">
+        <MicroLabel>Your opponent</MicroLabel>
+      </div>
+      <p className="mt-1 text-2xl font-semibold leading-tight tracking-tight">
+        {nameOf(opponent)}
+      </p>
 
       {pairing.status === "pending" ? (
         <div className="mt-5">
@@ -115,9 +130,10 @@ function MyMatch({
       ) : null}
 
       {pairing.status === "confirmed" && report ? (
-        <p className="mt-5 text-sm text-fg-dim">
-          Final <Score {...fromSideOf(report.score, iAmA)} /> — waiting on the rest of the round.
-        </p>
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          <Tag tone="accent">Reported</Tag>
+          <Score {...fromSideOf(report.score, iAmA)} />
+        </div>
       ) : null}
     </Card>
   );
@@ -156,41 +172,62 @@ export default async function EventPage(props: PageProps<"/events/[id]">) {
       {/* --------------------------------------------------------- draft */}
       {event.status === "draft" ? (
         <>
-          <Card className="mb-7 p-5">
-            <p className="text-sm text-fg-dim">
-              {event.players.length} player{event.players.length === 1 ? "" : "s"} signed up ·{" "}
-              {event.totalRounds} rounds
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {isPlayer ? (
-                <ActionForm
-                  action={leaveEventAction}
-                  fields={{ eventId: event.id }}
-                  label="Leave"
-                  variant="ghost"
-                  compact
-                />
+          <Card className="mb-3 p-5">
+            <div className="flex flex-wrap gap-2">
+              {event.players.length === 0 ? (
+                <Tag tone="warn">Needs players</Tag>
               ) : (
+                <CountPill
+                  value={event.players.length}
+                  label={event.players.length === 1 ? "player" : "players"}
+                  tone="accent"
+                />
+              )}
+              <CountPill value={event.totalRounds} label="rounds" />
+            </div>
+
+            <div className="mt-5">
+              {isPlayer ? (
+                <div className="flex flex-wrap items-center gap-3">
+                  <Tag tone="accent">✓ You&apos;re playing</Tag>
+                  <div className="ml-auto">
+                    <ActionForm
+                      action={leaveEventAction}
+                      fields={{ eventId: event.id }}
+                      label="Leave"
+                      variant="danger"
+                      compact
+                    />
+                  </div>
+                </div>
+              ) : (
+                /* The one thing most people come to this page to do. */
                 <ActionForm
                   action={joinEventAction}
                   fields={{ eventId: event.id }}
-                  label="Join event"
-                  variant="primary"
-                  compact
+                  label="Join this event"
+                  variant="solid"
+                  size="lg"
                 />
               )}
-              {isManager ? (
+            </div>
+          </Card>
+
+          {isManager ? (
+            <Card tone="raised" className="mb-7 p-5">
+              <MicroLabel>Manager</MicroLabel>
+              <div className="mt-3">
                 <ActionForm
                   action={startEventAction}
                   fields={{ eventId: event.id }}
-                  label="Start event"
+                  label="Start event →"
                   variant="primary"
-                  confirm="Start and pair round 1?"
-                  compact
+                  size="lg"
+                  confirm="Pair round 1 now?"
                 />
-              ) : null}
-            </div>
-          </Card>
+              </div>
+            </Card>
+          ) : null}
 
           <SectionHead count={event.players.length}>Signed up</SectionHead>
           {event.players.length === 0 ? (
@@ -228,11 +265,17 @@ export default async function EventPage(props: PageProps<"/events/[id]">) {
               </p>
             </Card>
           )}
-          <p className="px-1 text-sm text-fg-faint">
-            {open.length === 0
-              ? "All results in — the next round is being paired."
-              : `${open.length} match${open.length === 1 ? "" : "es"} still to report.`}
-          </p>
+          <div className="flex flex-wrap gap-2 px-0.5">
+            {open.length === 0 ? (
+              <Tag tone="accent">All results in</Tag>
+            ) : (
+              <CountPill
+                value={open.length}
+                label={open.length === 1 ? "match left" : "matches left"}
+                tone="warn"
+              />
+            )}
+          </div>
         </div>
       ) : null}
 
@@ -268,7 +311,9 @@ export default async function EventPage(props: PageProps<"/events/[id]">) {
                         {nameOf(s.userId)}
                       </span>
                       {s.byes > 0 ? (
-                        <span className="ml-1.5 text-xs text-fg-faint">bye</span>
+                        <span className="ml-2">
+                          <Badge>bye</Badge>
+                        </span>
                       ) : null}
                     </td>
                     <td className="py-2.5 pr-2 text-right font-mono tabular-nums">
