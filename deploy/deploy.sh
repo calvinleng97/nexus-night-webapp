@@ -50,14 +50,16 @@ log "deploying $TARGET"
 
 rollback() {
   log "ROLLING BACK to $PREV"
-  app "git reset --hard --quiet '$PREV'"
+  app "git checkout -q -B '$BRANCH' '$PREV'"
   app "npm ci --no-audit --no-fund --silent" || log "rollback npm ci failed"
   build || log "rollback build failed — the service may be degraded"
   systemctl restart "$SERVICE" || true
   if healthy; then log "rollback healthy"; else log "ROLLBACK UNHEALTHY — needs a human"; fi
 }
 
-app "git reset --hard --quiet '$TARGET'"
+# checkout -B rather than reset --hard, so the local branch name on the box
+# actually matches the branch being deployed instead of whatever it was before.
+app "git checkout -q -B '$BRANCH' '$TARGET'"
 
 if ! app "npm ci --no-audit --no-fund --silent"; then
   log "npm ci failed"; rollback; exit 1
