@@ -105,12 +105,15 @@ as an authorized redirect URI on your OAuth client. `localhost` is the one host
 Google accepts without a domain.
 
 ```bash
-npm test          # 64 tests: pairing, event lifecycle, storage
+npm test          # 80 tests: pairing, event lifecycle, storage, Elo
 npm run typecheck
 npm run simulate  # pairing probe across field sizes
 npm run simulate -- 2-64 --trials=200
 npm run simulate -- 2-16 --priority=avoid-rematch   # compare policies
-npx tsx scripts/stats.ts   # example stats read over the data directory
+npx tsx scripts/stats.ts          # example stats read over the data directory
+npx tsx scripts/demo.ts 7         # play a full night and print every step
+npx tsx scripts/seed-history.ts   # seed finished events so History/Elo have data
+npx tsx scripts/seed-history.ts --events=5 --players=10 --skill=-1
 ```
 
 ---
@@ -255,6 +258,10 @@ formatted and diffs cleanly.
 | `event.defaultRounds` | `3` | Swiss rounds for new events |
 | `pairing.priority` | `record` | `record` = pair strictly within records, replaying a pairing if needed. `avoid-rematch` = never repeat a pairing, mismatching records instead |
 | `league.openJoin` | `true` | Any signed-in user may join any league |
+| `elo.base` | `1200` | Rating every player starts from |
+| `elo.k` | `24` | K factor once a player is established |
+| `elo.provisionalK` | `40` | K factor while a player is still settling |
+| `elo.provisionalGames` | `10` | Rated matches before a player stops being provisional |
 
 Env overrides: `NEXUS_CONFIG` (config file path), `NEXUS_DATA_DIR`, `NEXUS_SITE_URL`.
 
@@ -266,6 +273,8 @@ Env overrides: `NEXUS_CONFIG` (config file path), `NEXUS_DATA_DIR`, `NEXUS_SITE_
 src/lib/domain/pairing.ts         matching solver — the interesting part
 src/lib/domain/event-machine.ts   start, report, confirm, dispute, drop, advance
 src/lib/domain/standings.ts       records from confirmed results
+src/lib/domain/elo.ts             per-league Elo, derived from results
+src/lib/domain/history.ts         one player's match history across events
 src/lib/store/                    JSON/JSONL persistence, locking, atomic writes
 src/lib/config.ts                 config file + env loading
 src/lib/auth.ts                   Auth.js with Google
@@ -273,5 +282,7 @@ src/app/                          pages and server actions
 tests/                            pairing, event lifecycle, storage
 scripts/simulate.ts               pairing probe
 scripts/stats.ts                  example stats reader
+scripts/demo.ts                   plays a full night end to end
+scripts/seed-history.ts           seeds finished events for History and Elo
 deploy/                           Caddyfile, systemd unit
 ```

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { currentUserId } from "@/lib/auth";
 import { loadConfig } from "@/lib/config";
+import { computeLeagueElo } from "@/lib/domain/elo";
 import { getLeague, getUsers, listEventsForLeague } from "@/lib/store/repo";
 import { ActionForm } from "@/components/action-form";
 import {
@@ -41,6 +42,9 @@ export default async function LeaguePage(props: PageProps<"/leagues/[id]">) {
   const isMember = league.memberIds.includes(userId);
   const isManager = league.managerIds.includes(userId);
   const cfg = loadConfig();
+  // Derived on every view from the confirmed results on disk.
+  const ratings = computeLeagueElo(events, league.memberIds, cfg.elo);
+  const rated = ratings.some((r) => r.games > 0);
 
   return (
     <div>
@@ -172,31 +176,73 @@ export default async function LeaguePage(props: PageProps<"/leagues/[id]">) {
       {/* --------------------------------------------------------- players */}
       <div className="mt-9">
         <SectionHead count={league.memberIds.length}>Players</SectionHead>
-        {/* Deliberately a different shape from the event cards above: a dense
-            grid of pills, so events and people never read as one list. */}
-        <ul className="flex flex-wrap gap-2">
-          {league.memberIds.map((m) => {
-            const memberIsManager = league.managerIds.includes(m);
-            return (
-              <li
-                key={m}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm ${
-                  m === userId
-                    ? "border-accent/40 bg-accent/10 text-accent"
-                    : "border-hair-soft bg-raised text-fg-dim"
-                }`}
-              >
-                {memberIsManager ? (
-                  <span aria-label="Manager" title="Manager" className="text-accent">
-                    ★
-                  </span>
-                ) : null}
-                <span className="max-w-[16ch] truncate">{users.get(m)?.name ?? "Unknown"}</span>
-                {m === userId ? <span className="text-accent/60">you</span> : null}
-              </li>
-            );
-          })}
-        </ul>
+        {/* A table, deliberately a different shape from the event cards above,
+            so events and people never read as one list. */}
+        <Card className="overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-hair text-left text-xs uppercase tracking-wide text-fg-faint">
+                <th className="py-2.5 pl-4 pr-2 font-medium">#</th>
+                <th className="py-2.5 pr-2 font-medium">Player</th>
+                <th className="py-2.5 pr-2 text-right font-medium">Elo</th>
+                <th className="py-2.5 pr-4 text-right font-medium">W&ndash;L</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ratings.map((r) => {
+                const memberIsManager = league.managerIds.includes(r.userId);
+                const delta = r.lastDelta;
+                return (
+                  <tr
+                    key={r.userId}
+                    className={`border-b border-hair-soft last:border-0 ${
+                      r.userId === userId ? "bg-accent/5" : ""
+                    }`}
+                  >
+                    <td className="py-2.5 pl-4 pr-2 text-fg-faint">{rated ? r.rank : "·"}</td>
+                    <td className="py-2.5 pr-2">
+                      <span className="flex items-center gap-1.5">
+                        {memberIsManager ? (
+                          <span aria-label="Manager" title="Manager" className="text-accent">
+                            ★
+                          </span>
+                        ) : null}
+                        <span
+                          className={`min-w-0 truncate ${
+                            r.userId === userId ? "text-accent" : ""
+                          }`}
+                        >
+                          {users.get(r.userId)?.name ?? "Unknown"}
+                        </span>
+                        {r.games === 0 ? <Badge>new</Badge> : null}
+                      </span>
+                    </td>
+                    <td className="py-2.5 pr-2 text-right">
+                      <span className="font-mono tabular-nums">{r.rating}</span>
+                      {delta !== null && delta !== 0 ? (
+                        <span
+                          className={`ml-1.5 font-mono text-xs tabular-nums ${
+                            delta > 0 ? "text-win" : "text-loss"
+                          }`}
+                        >
+                          {delta > 0 ? "▲" : "▼"}
+                          {Math.abs(delta)}
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="py-2.5 pr-4 text-right font-mono tabular-nums text-fg-dim">
+                      {r.games === 0
+                        ? "—"
+                        : r.draws > 0
+                          ? `${r.wins}-${r.losses}-${r.draws}`
+                          : `${r.wins}-${r.losses}`}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </Card>
 
         {isManager ? (
           <details className="group mt-4">

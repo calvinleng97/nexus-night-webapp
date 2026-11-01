@@ -32,6 +32,16 @@ export interface NexusConfig {
     /** When true, any signed-in user can see and join any league. */
     openJoin: boolean;
   };
+  /**
+   * Per-league Elo. Ratings are recomputed from stored results on every view,
+   * so changing these re-rates every past match.
+   */
+  elo: {
+    base: number;
+    k: number;
+    provisionalK: number;
+    provisionalGames: number;
+  };
 }
 
 const DEFAULTS: NexusConfig = {
@@ -40,6 +50,7 @@ const DEFAULTS: NexusConfig = {
   event: { defaultRounds: 3 },
   pairing: { priority: "record" },
   league: { openJoin: true },
+  elo: { base: 1200, k: 24, provisionalK: 40, provisionalGames: 10 },
 };
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -63,12 +74,27 @@ function merge(base: NexusConfig, patch: Record<string, unknown>): NexusConfig {
   }
   if (isRecord(patch.league) && typeof patch.league.openJoin === "boolean")
     out.league.openJoin = patch.league.openJoin;
+  if (isRecord(patch.elo)) {
+    const e = patch.elo;
+    if (typeof e.base === "number") out.elo.base = e.base;
+    if (typeof e.k === "number") out.elo.k = e.k;
+    if (typeof e.provisionalK === "number") out.elo.provisionalK = e.provisionalK;
+    if (typeof e.provisionalGames === "number") out.elo.provisionalGames = e.provisionalGames;
+  }
   return out;
 }
 
 function validate(cfg: NexusConfig): NexusConfig {
   if (!Number.isInteger(cfg.event.defaultRounds) || cfg.event.defaultRounds < 1)
     throw new Error("config: event.defaultRounds must be a positive integer.");
+  for (const [key, value] of [
+    ["elo.k", cfg.elo.k],
+    ["elo.provisionalK", cfg.elo.provisionalK],
+  ] as const) {
+    if (!(value > 0)) throw new Error(`config: ${key} must be greater than 0.`);
+  }
+  if (cfg.elo.provisionalGames < 0)
+    throw new Error("config: elo.provisionalGames cannot be negative.");
   return cfg;
 }
 
