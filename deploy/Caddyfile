@@ -1,0 +1,19 @@
+# Caddy gets a Let's Encrypt certificate automatically on first start.
+# Install:  sudo apt install caddy
+# Place at: /etc/caddy/Caddyfile   then: sudo systemctl reload caddy
+#
+# Replace the hostname with your own. Google OAuth will not accept a bare IP,
+# which is why this needs a real name pointing at the box.
+#
+# Logging is left to journald (journalctl -u caddy). The packaged caddy unit
+# sandboxes /var/log, so a `log { output file ... }` block here fails at
+# startup with "permission denied" even after chown-ing the directory.
+
+nexusnight.duckdns.org {
+	encode zstd gzip
+
+	reverse_proxy localhost:3000 {
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {host}
+	}
+}

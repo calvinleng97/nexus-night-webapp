@@ -1,0 +1,20 @@
+{
+  "dataDir": "/srv/nexus-night/data",
+  "site": {
+    "name": "Nexus Night",
+    "url": "https://nexusnight.duckdns.org",
+    "contactEmail": ""
+  },
+  "event": {
+    "defaultRounds": 3
+  },
+  "pairing": {
+    "priority": "record"
+  },
+  "elo": {
+    "base": 1200,
+    "k": 24,
+    "provisionalK": 40,
+    "provisionalGames": 10
+  }
+}
