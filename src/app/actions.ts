@@ -15,11 +15,13 @@ import {
   createEvent,
   createLeague,
   joinEvent,
+  getLeagueByJoinCode,
   joinLeague,
   leaveEvent,
   leaveLeague,
   mutateEvent,
   removeLeagueMember,
+  rotateJoinCode,
   setLeagueManager,
 } from "@/lib/store/repo";
 
@@ -59,14 +61,44 @@ export async function createLeagueAction(_prev: ActionState, form: FormData): Pr
   });
 }
 
+/** Join a specific league, with its code. */
 export async function joinLeagueAction(_prev: ActionState, form: FormData): Promise<ActionState> {
   return guard(async () => {
     const userId = await requireUserId();
     const leagueId = str(form, "leagueId");
-    await joinLeague(leagueId, userId);
+    const code = str(form, "code");
+    if (!code) return fail("Enter the league's join code.");
+    await joinLeague(leagueId, userId, code);
     revalidatePath("/leagues");
     revalidatePath(`/leagues/${leagueId}`);
     return { ok: true };
+  });
+}
+
+/** Join whichever league owns the code, without needing its link. */
+export async function joinByCodeAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const userId = await requireUserId();
+    const code = str(form, "code");
+    if (!code) return fail("Enter a join code.");
+    const league = await getLeagueByJoinCode(code);
+    if (!league) return fail("No league has that join code.");
+    await joinLeague(league.id, userId, code);
+    revalidatePath("/leagues");
+    redirect(`/leagues/${league.id}`);
+  });
+}
+
+export async function rotateJoinCodeAction(
+  _prev: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  return guard(async () => {
+    const userId = await requireUserId();
+    const leagueId = str(form, "leagueId");
+    await rotateJoinCode(leagueId, userId);
+    revalidatePath(`/leagues/${leagueId}`);
+    return { ok: true, warnings: ["The old code no longer works."] };
   });
 }
 

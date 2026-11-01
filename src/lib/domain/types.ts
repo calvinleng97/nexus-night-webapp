@@ -20,6 +20,8 @@ export interface User {
 export interface League {
   id: LeagueId;
   name: string;
+  /** Shared secret players need in order to join. Rotatable by a manager. */
+  joinCode: string;
   createdBy: UserId;
   /** Managers can create events. The creator is always a manager. */
   managerIds: UserId[];

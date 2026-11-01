@@ -3,6 +3,7 @@ import { mkdtemp, readFile, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { startEvent, submitResult, confirmResult, currentRound } from "@/lib/domain/event-machine";
+import { SCHEMA_VERSION } from "@/lib/store/schema";
 
 // The store reads its data directory from config on first use, so point it at a
 // throwaway directory before anything imports it.
@@ -28,7 +29,7 @@ describe("file store round-trip", () => {
     expect(entries).toContain("events");
     expect(entries).toContain("meta.json");
     const meta = JSON.parse(await readFile(join(dataDir, "meta.json"), "utf8"));
-    expect(meta.schemaVersion).toBe(1);
+    expect(meta.schemaVersion).toBe(SCHEMA_VERSION);
   });
 
   it("gives a user a stable id across repeated sign-ins", async () => {
@@ -137,13 +138,63 @@ describe("file store round-trip", () => {
     expect(new Set(loaded.players.map((p) => p.userId)).size).toBe(4);
   });
 
+  it("gates joining behind the league's code", async () => {
+    const owner = await makeUser("sub-code-o", "CodeOwner");
+    const joiner = await makeUser("sub-code-j", "CodeJoiner");
+    const league = await repo.createLeague({ name: "Coded", createdBy: owner.id });
+
+    expect(league.joinCode).toMatch(/^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{6}$/);
+
+    await expect(repo.joinLeague(league.id, joiner.id, "WRONG1")).rejects.toThrow(/not right/i);
+    await expect(repo.joinLeague(league.id, joiner.id, "")).rejects.toThrow(/not right/i);
+    expect((await repo.getLeague(league.id))!.memberIds).not.toContain(joiner.id);
+
+    // Typed however it arrives: lower case, spaced, dashed.
+    const messy = `${league.joinCode.slice(0, 3).toLowerCase()}-${league.joinCode.slice(3)}`;
+    const after = await repo.joinLeague(league.id, joiner.id, messy);
+    expect(after.memberIds).toContain(joiner.id);
+
+    // An existing member re-submitting is a no-op, not an error.
+    await expect(repo.joinLeague(league.id, joiner.id, "WRONG1")).resolves.toBeTruthy();
+  });
+
+  it("finds a league by its code and gives every league a distinct one", async () => {
+    const owner = await makeUser("sub-code2", "CodeOwner2");
+    const a = await repo.createLeague({ name: "A", createdBy: owner.id });
+    const b = await repo.createLeague({ name: "B", createdBy: owner.id });
+    expect(a.joinCode).not.toBe(b.joinCode);
+
+    const found = await repo.getLeagueByJoinCode(a.joinCode.toLowerCase());
+    expect(found?.id).toBe(a.id);
+    expect(await repo.getLeagueByJoinCode("ZZZZZZ")).toBeNull();
+    expect(await repo.getLeagueByJoinCode("")).toBeNull();
+  });
+
+  it("rotates a code, invalidating the old one, managers only", async () => {
+    const owner = await makeUser("sub-rot-o", "RotOwner");
+    const member = await makeUser("sub-rot-m", "RotMember");
+    const outsider = await makeUser("sub-rot-x", "RotOutsider");
+    const league = await repo.createLeague({ name: "Rotate", createdBy: owner.id });
+    await repo.joinLeague(league.id, member.id, league.joinCode);
+    const old = league.joinCode;
+
+    await expect(repo.rotateJoinCode(league.id, member.id)).rejects.toThrow(/league manager/i);
+
+    const rotated = await repo.rotateJoinCode(league.id, owner.id);
+    expect(rotated.joinCode).not.toBe(old);
+    await expect(repo.joinLeague(league.id, outsider.id, old)).rejects.toThrow(/not right/i);
+    await expect(
+      repo.joinLeague(league.id, outsider.id, rotated.joinCode),
+    ).resolves.toBeTruthy();
+  });
+
   it("lets a manager remove a member, but not the creator or themselves", async () => {
     const owner = await makeUser("sub-kick-o", "KickOwner");
     const helper = await makeUser("sub-kick-h", "Helper");
     const victim = await makeUser("sub-kick-v", "Victim");
     const league = await repo.createLeague({ name: "Kickable", createdBy: owner.id });
-    await repo.joinLeague(league.id, helper.id);
-    await repo.joinLeague(league.id, victim.id);
+    await repo.joinLeague(league.id, helper.id, league.joinCode);
+    await repo.joinLeague(league.id, victim.id, league.joinCode);
 
     // A plain member cannot remove anyone.
     await expect(repo.removeLeagueMember(league.id, helper.id, victim.id)).rejects.toThrow(
@@ -184,7 +235,7 @@ describe("file store round-trip", () => {
       [0, 1, 2, 3].map((i) => makeUser(`sub-kick2-p${i}`, `K2P${i}`)),
     );
     const league = await repo.createLeague({ name: "Live", createdBy: owner.id });
-    for (const p of players) await repo.joinLeague(league.id, p.id);
+    for (const p of players) await repo.joinLeague(league.id, p.id, league.joinCode);
     let event = await repo.createEvent({ leagueId: league.id, name: "Live night", createdBy: owner.id });
     for (const p of players) event = await repo.joinEvent(event.id, p.id);
     await repo.mutateEvent(event.id, owner.id, (e) => {

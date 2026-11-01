@@ -9,8 +9,12 @@ Next.js 16 · Google sign-in · plain JSON/JSONL files as the database.
 
 ## How it works
 
-**Leagues** are standing groups of players. Any signed-in user can see and join any
-league. League managers can create **events**. An event is one night: players join
+**Leagues** are standing groups of players, joined with a **join code**. Every
+league gets a random 6-character code on creation (upper case, with I/L/O/0/1
+left out so it cannot be mistyped), shown at the top of the league page. A
+manager can issue a new one at any time, which invalidates the old immediately.
+Leagues you are not in are not listed anywhere — the code is the only way in,
+and a league's link alone is not an invitation. League managers can create **events**. An event is one night: players join
 while it's in `draft`, a manager starts it, and the app pairs **3 rounds** of Swiss
 (configurable per event).
 
@@ -114,7 +118,7 @@ as an authorized redirect URI on your OAuth client. `localhost` is the one host
 Google accepts without a domain.
 
 ```bash
-npm test          # 80 tests: pairing, event lifecycle, storage, Elo
+npm test          # 88 tests: pairing, event lifecycle, storage, Elo, migrations
 npm run typecheck
 npm run simulate  # pairing probe across field sizes
 npm run simulate -- 2-64 --trials=200
@@ -222,6 +226,9 @@ Point `dataDir` at any directory; the app writes nowhere else. A test asserts th
   events/<eventId>/matches.jsonl   append-only history of that event
   log/audit.jsonl                  append-only trail across everything
   .locks/                          transient advisory lock files
+
+`meta.json` records the schema version. Migrations are forward-only and run
+once at startup: v2 gave every pre-existing league a join code.
 ```
 
 Writes go to a temp file then `rename(2)`, which is atomic, so a reader never sees
@@ -267,7 +274,6 @@ formatted and diffs cleanly.
 | `site.url` | `http://localhost:3000` | Public origin; must match the OAuth redirect origin |
 | `event.defaultRounds` | `3` | Swiss rounds for new events |
 | `pairing.priority` | `record` | `record` = pair strictly within records, replaying a pairing if needed. `avoid-rematch` = never repeat a pairing, mismatching records instead |
-| `league.openJoin` | `true` | Any signed-in user may join any league |
 | `elo.base` | `1200` | Rating every player starts from |
 | `elo.k` | `24` | K factor once a player is established |
 | `elo.provisionalK` | `40` | K factor while a player is still settling |

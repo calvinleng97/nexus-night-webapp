@@ -1,5 +1,5 @@
 import { loadConfig } from "../config";
-import { newId, newSeed, userIdFromGoogleSub } from "../ids";
+import { newId, newJoinCode, newSeed, normalizeJoinCode, userIdFromGoogleSub } from "../ids";
 import { emptyEvent } from "../domain/event-machine";
 import type { League, NexusEvent, User, UserId } from "../domain/types";
 import {
@@ -45,6 +45,26 @@ export async function initStore(): Promise<void> {
       `Data directory ${paths.root()} was written by a newer version (schema ${meta.schemaVersion}); ` +
         `this build understands ${SCHEMA_VERSION}.`,
     );
+  if (meta.schemaVersion < SCHEMA_VERSION) await migrate(meta.schemaVersion);
+}
+
+/** Forward-only migrations, run once at startup. */
+async function migrate(from: number): Promise<void> {
+  if (from < 2) {
+    // v2 introduced League.joinCode. Give every existing league one.
+    const files = await listJsonFiles(paths.leaguesDir());
+    for (const file of files) {
+      const league = await readJson<League>(file);
+      if (!league || league.joinCode) continue;
+      await writeJsonAtomic(file, { ...league, joinCode: newJoinCode() });
+    }
+  }
+  await writeJsonAtomic(paths.meta(), {
+    schemaVersion: SCHEMA_VERSION,
+    createdAt: new Date().toISOString(),
+    app: "nexus-night-webapp",
+  } satisfies StoreMeta);
+  await audit({ action: "store_migrated", from, to: SCHEMA_VERSION });
 }
 
 async function audit(record: Record<string, unknown>): Promise<void> {
@@ -100,9 +120,15 @@ export async function createLeague(input: {
   createdBy: UserId;
 }): Promise<League> {
   await storeReady();
+  // Codes are the only way in, so make sure two leagues never share one.
+  const taken = new Set((await listLeagues()).map((l) => l.joinCode));
+  let joinCode = newJoinCode();
+  for (let tries = 0; taken.has(joinCode) && tries < 20; tries++) joinCode = newJoinCode();
+
   const league: League = {
     id: newId("lg"),
     name: input.name.trim(),
+    joinCode,
     createdBy: input.createdBy,
     managerIds: [input.createdBy],
     memberIds: [input.createdBy],
@@ -127,6 +153,15 @@ export async function listLeagues(): Promise<League[]> {
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
+/** Find a league by its join code. Case and punctuation insensitive. */
+export async function getLeagueByJoinCode(code: string): Promise<League | null> {
+  await storeReady();
+  const wanted = normalizeJoinCode(code);
+  if (!wanted) return null;
+  const all = await listLeagues();
+  return all.find((l) => normalizeJoinCode(l.joinCode) === wanted) ?? null;
+}
+
 async function mutateLeague(
   id: string,
   fn: (league: League) => Promise<League> | League,
@@ -141,15 +176,37 @@ async function mutateLeague(
   });
 }
 
-export async function joinLeague(leagueId: string, userId: UserId): Promise<League> {
-  const cfg = loadConfig();
+/**
+ * Join a league. The code is required for anyone who is not already a member;
+ * re-joining is a no-op so a stale form submission cannot fail confusingly.
+ */
+export async function joinLeague(
+  leagueId: string,
+  userId: UserId,
+  code: string,
+): Promise<League> {
   const league = await mutateLeague(leagueId, (l) => {
-    if (!cfg.league.openJoin && !l.memberIds.includes(userId))
-      throw new Error("This league is not open to join.");
     if (l.memberIds.includes(userId)) return l;
+    if (normalizeJoinCode(code) !== normalizeJoinCode(l.joinCode))
+      throw new Error("That join code is not right.");
     return { ...l, memberIds: [...l.memberIds, userId] };
   });
   await audit({ action: "league_joined", leagueId, actor: userId });
+  return league;
+}
+
+/** Issue a new code, which invalidates the old one immediately. */
+export async function rotateJoinCode(leagueId: string, actorId: UserId): Promise<League> {
+  const taken = new Set((await listLeagues()).map((l) => l.joinCode));
+  const league = await mutateLeague(leagueId, (l) => {
+    if (!l.managerIds.includes(actorId))
+      throw new Error("Only a league manager can change the join code.");
+    let next = newJoinCode();
+    for (let tries = 0; (taken.has(next) || next === l.joinCode) && tries < 20; tries++)
+      next = newJoinCode();
+    return { ...l, joinCode: next };
+  });
+  await audit({ action: "league_code_rotated", leagueId, actor: actorId });
   return league;
 }
 

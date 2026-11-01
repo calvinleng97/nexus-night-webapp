@@ -11,9 +11,10 @@ import {
   Field,
   PageTitle,
   SectionHead,
+  codeInputClass,
   inputClass,
 } from "@/components/ui";
-import { createLeagueAction, joinLeagueAction } from "../actions";
+import { createLeagueAction, joinByCodeAction } from "../actions";
 
 export default async function LeaguesPage(props: PageProps<"/leagues">) {
   const userId = await currentUserId();
@@ -24,8 +25,8 @@ export default async function LeaguesPage(props: PageProps<"/leagues">) {
   const eventCount = new Map<string, number>();
   for (const e of events) eventCount.set(e.leagueId, (eventCount.get(e.leagueId) ?? 0) + 1);
 
+  // Leagues you are not in are not listed: a join code is the only way in.
   const mine = leagues.filter((l) => l.memberIds.includes(userId));
-  const others = leagues.filter((l) => !l.memberIds.includes(userId));
 
   return (
     <div>
@@ -109,31 +110,27 @@ export default async function LeaguesPage(props: PageProps<"/leagues">) {
         </ul>
       )}
 
-      {others.length > 0 ? (
-        <div className="mt-9">
-          <SectionHead>Open to join</SectionHead>
-          <ul className="space-y-2">
-            {others.map((l) => (
-              <Card as="li" key={l.id} tone="raised">
-                <div className="flex flex-wrap items-center gap-3 p-3.5">
-                  <p className="min-w-0 flex-1 truncate text-sm font-medium">{l.name}</p>
-                  <CountPill
-                    value={l.memberIds.length}
-                    label={l.memberIds.length === 1 ? "player" : "players"}
-                  />
-                  <ActionForm
-                    action={joinLeagueAction}
-                    fields={{ leagueId: l.id }}
-                    label="Join"
-                    variant="primary"
-                    compact
-                  />
-                </div>
-              </Card>
-            ))}
-          </ul>
-        </div>
-      ) : null}
+      <div className="mt-9">
+        <SectionHead>Join a league</SectionHead>
+        <Card className="p-4">
+          <ActionForm action={joinByCodeAction} label="Join" variant="primary">
+            <div className="mb-3">
+              <Field label="Join code">
+                <input
+                  name="code"
+                  required
+                  maxLength={12}
+                  autoComplete="off"
+                  autoCapitalize="characters"
+                  spellCheck={false}
+                  className={codeInputClass}
+                  placeholder="ABC123"
+                />
+              </Field>
+            </div>
+          </ActionForm>
+        </Card>
+      </div>
     </div>
   );
 }

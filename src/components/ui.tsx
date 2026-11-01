@@ -119,6 +119,9 @@ export function Field({ label, children }: { label: string; children: ReactNode 
   );
 }
 
+export const codeInputClass =
+  "w-full rounded-xl border border-hair bg-ink px-3.5 py-2.5 font-mono text-lg uppercase tracking-[0.25em] text-fg outline-none placeholder:tracking-[0.25em] placeholder:text-fg-faint/50 focus:border-accent/50";
+
 export const inputClass =
   "w-full rounded-xl border border-hair bg-ink px-3.5 py-2.5 text-base text-fg outline-none placeholder:text-fg-faint/70 focus:border-accent/50";
 

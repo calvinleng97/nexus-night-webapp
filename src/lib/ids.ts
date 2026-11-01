@@ -15,6 +15,24 @@ export function userIdFromGoogleSub(sub: string): string {
   return `u_${h.slice(0, 16)}`;
 }
 
+/**
+ * Join-code alphabet. Upper case, with I, L, O, 0 and 1 left out so a code
+ * read aloud or copied off a phone screen cannot be mistyped.
+ */
+const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+export function newJoinCode(length = 6): string {
+  const bytes = randomBytes(length);
+  let out = "";
+  for (let i = 0; i < length; i++) out += CODE_ALPHABET[bytes[i]! % CODE_ALPHABET.length];
+  return out;
+}
+
+/** Accept what someone actually types: any case, with spaces or dashes. */
+export function normalizeJoinCode(raw: string): string {
+  return raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
 export function newSeed(): number {
   return randomBytes(4).readUInt32BE(0);
 }

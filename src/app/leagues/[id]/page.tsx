@@ -13,8 +13,10 @@ import {
   Empty,
   Field,
   PageTitle,
+  MicroLabel,
   SectionHead,
   Tag,
+  codeInputClass,
   inputClass,
 } from "@/components/ui";
 import {
@@ -22,6 +24,7 @@ import {
   joinLeagueAction,
   leaveLeagueAction,
   removeMemberAction,
+  rotateJoinCodeAction,
   setManagerAction,
 } from "../../actions";
 
@@ -55,17 +58,57 @@ export default async function LeaguePage(props: PageProps<"/leagues/[id]">) {
       </div>
 
       {!isMember ? (
-        <Card className="mb-7 flex flex-wrap items-center gap-3 p-4">
-          <p className="flex-1 text-sm text-fg-dim">You&apos;re not in this league yet.</p>
-          <ActionForm
-            action={joinLeagueAction}
-            fields={{ leagueId: league.id }}
-            label="Join league"
-            variant="primary"
-            compact
-          />
+        <Card className="p-5">
+          <MicroLabel>Join code required</MicroLabel>
+          <div className="mt-4">
+            <ActionForm
+              action={joinLeagueAction}
+              fields={{ leagueId: league.id }}
+              label="Join league"
+              variant="solid"
+              size="lg"
+            >
+              <input
+                name="code"
+                required
+                autoFocus
+                maxLength={12}
+                autoComplete="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                className={`${codeInputClass} mb-3`}
+                placeholder="ABC123"
+              />
+            </ActionForm>
+          </div>
         </Card>
       ) : null}
+
+      {isMember ? (
+        <>
+          <div className="mb-7">
+            <SectionHead
+              action={
+                isManager ? (
+                  <ActionForm
+                    action={rotateJoinCodeAction}
+                    fields={{ leagueId: league.id }}
+                    label="New code"
+                    variant="ghost"
+                    confirm="Replace the code"
+                    compact
+                  />
+                ) : null
+              }
+            >
+              Join code
+            </SectionHead>
+            <Card className="px-5 py-4">
+              <p className="font-mono text-2xl font-semibold uppercase tracking-[0.3em] text-accent">
+                {league.joinCode}
+              </p>
+            </Card>
+          </div>
 
       {/* ---------------------------------------------------------- events */}
       <SectionHead
@@ -183,7 +226,7 @@ export default async function LeaguePage(props: PageProps<"/leagues/[id]">) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-hair text-left text-xs uppercase tracking-wide text-fg-faint">
-                <th className="py-2.5 pl-4 pr-2 font-medium">#</th>
+                <th className="w-10 py-2.5 pl-4 pr-2 font-medium">#</th>
                 <th className="py-2.5 pr-2 font-medium">Player</th>
                 <th className="py-2.5 pr-2 text-right font-medium">Elo</th>
                 <th className="py-2.5 pr-4 text-right font-medium">W&ndash;L</th>
@@ -300,6 +343,8 @@ export default async function LeaguePage(props: PageProps<"/leagues/[id]">) {
           </div>
         ) : null}
       </div>
+        </>
+      ) : null}
     </div>
   );
 }

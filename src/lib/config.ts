@@ -28,10 +28,6 @@ export interface NexusConfig {
      */
     priority: "record" | "avoid-rematch";
   };
-  league: {
-    /** When true, any signed-in user can see and join any league. */
-    openJoin: boolean;
-  };
   /**
    * Per-league Elo. Ratings are recomputed from stored results on every view,
    * so changing these re-rates every past match.
@@ -49,7 +45,6 @@ const DEFAULTS: NexusConfig = {
   site: { name: "Nexus Night", url: "http://localhost:3000" },
   event: { defaultRounds: 3 },
   pairing: { priority: "record" },
-  league: { openJoin: true },
   elo: { base: 1200, k: 24, provisionalK: 40, provisionalGames: 10 },
 };
 
@@ -72,8 +67,6 @@ function merge(base: NexusConfig, patch: Record<string, unknown>): NexusConfig {
       throw new Error(`config: pairing.priority must be "record" or "avoid-rematch", got "${p}".`);
     out.pairing.priority = p;
   }
-  if (isRecord(patch.league) && typeof patch.league.openJoin === "boolean")
-    out.league.openJoin = patch.league.openJoin;
   if (isRecord(patch.elo)) {
     const e = patch.elo;
     if (typeof e.base === "number") out.elo.base = e.base;

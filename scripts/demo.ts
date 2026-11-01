@@ -65,7 +65,7 @@ async function main() {
   console.log(`   ${organiser.name} is automatically a manager.`);
 
   rule("3. Everyone else joins (leagues are open)");
-  for (const u of users.slice(1)) await repo.joinLeague(league.id, u.id);
+  for (const u of users.slice(1)) await repo.joinLeague(league.id, u.id, league.joinCode);
   const joined = await repo.getLeague(league.id);
   console.log(`   ${joined!.memberIds.length} members, ${joined!.managerIds.length} manager`);
 

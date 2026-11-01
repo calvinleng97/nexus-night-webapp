@@ -81,7 +81,13 @@ function MyMatch({
 
       {pairing.status === "pending" ? (
         <div className="mt-5">
-          <ActionForm action={submitScoreAction} fields={common} label="Submit" variant="primary">
+          <ActionForm
+            action={submitScoreAction}
+            fields={common}
+            label="Submit result"
+            variant="solid"
+            size="lg"
+          >
             <ScoreSelect />
           </ActionForm>
         </div>
@@ -110,7 +116,7 @@ function MyMatch({
                 action={confirmScoreAction}
                 fields={common}
                 label="Confirm"
-                variant="primary"
+                variant="solid"
                 compact
               />
               <ActionForm
@@ -287,7 +293,7 @@ export default async function EventPage(props: PageProps<"/events/[id]">) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-hair text-left text-xs uppercase tracking-wide text-fg-faint">
-                  <th className="py-2.5 pl-4 pr-2 font-medium">#</th>
+                  <th className="w-10 py-2.5 pl-4 pr-2 font-medium">#</th>
                   <th className="py-2.5 pr-2 font-medium">Player</th>
                   <th className="py-2.5 pr-2 text-right font-medium">Pts</th>
                   <th className="py-2.5 pr-4 text-right font-medium">W–L</th>

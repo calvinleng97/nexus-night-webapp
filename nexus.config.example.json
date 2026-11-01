@@ -10,7 +10,10 @@
   "pairing": {
     "priority": "record"
   },
-  "league": {
-    "openJoin": true
+  "elo": {
+    "base": 1200,
+    "k": 24,
+    "provisionalK": 40,
+    "provisionalGames": 10
   }
 }

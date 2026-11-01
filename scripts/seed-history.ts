@@ -85,7 +85,7 @@ async function main() {
       name,
       image: null,
     });
-    await repo.joinLeague(league.id, u.id);
+    await repo.joinLeague(league.id, u.id, league.joinCode);
     roster.push(u.id);
     // Spread hidden skill so ratings separate instead of milling around base.
     skill.set(u.id, (rand() - 0.5) * 1.6);
