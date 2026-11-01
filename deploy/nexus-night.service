@@ -1,0 +1,34 @@
+# Install:
+#   sudo cp deploy/nexus-night.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now nexus-night
+# Logs:
+#   journalctl -u nexus-night -f
+
+[Unit]
+Description=Nexus Night webapp
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=nexus
+Group=nexus
+WorkingDirectory=/srv/nexus-night/app
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=NEXUS_CONFIG=/etc/nexus-night/config.json
+EnvironmentFile=/etc/nexus-night/env
+ExecStart=/usr/bin/npm run start
+Restart=on-failure
+RestartSec=3
+
+# The data directory is the only path this service needs to write.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/nexus-night/data /srv/nexus-night/app/.next
+
+[Install]
+WantedBy=multi-user.target

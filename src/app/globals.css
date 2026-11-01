@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #0a0d13;
+  --color-panel: #12171f;
+  --color-panel-2: #171d27;
+  --color-line: #262f3d;
+  --color-accent: #c8aa6e;
+  --color-accent-dim: #8d7747;
+  --color-muted: #8b97a8;
+  --color-win: #4ade80;
+  --color-loss: #f87171;
+  --color-draw: #fbbf24;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--color-ink);
+  color: #e8edf4;
+  font-family: var(--font-sans);
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Keep tap targets comfortable on a phone at a table. */
+@media (pointer: coarse) {
+  button,
+  a[role="button"],
+  select {
+    min-height: 44px;
+  }
+}
