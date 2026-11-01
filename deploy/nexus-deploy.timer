@@ -1,0 +1,13 @@
+# Checks once a minute, so a push is live within about a minute with no
+# inbound access to the box and no deploy credentials stored in GitHub.
+[Unit]
+Description=Check for Nexus Night deployments
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+AccuracySec=15s
+Unit=nexus-deploy.service
+
+[Install]
+WantedBy=timers.target

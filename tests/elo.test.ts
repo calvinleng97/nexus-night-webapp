@@ -41,6 +41,7 @@ function makeEvent(matches: MatchSpec[], id = "ev_1", at = "2026-01-01T00:00:00.
     name: "Test",
     status: "complete",
     totalRounds: matches.length,
+    scheduledFor: null,
     createdBy: "mgr",
     managerIds: ["mgr"],
     players: [],

@@ -3,11 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { requireUserId } from "@/lib/auth";
+import { isValidEventDate } from "@/lib/domain/schedule";
 import {
   confirmResult,
   disputeResult,
   dropPlayer,
   forceCloseRound,
+  setEventDate,
   startEvent,
   submitResult,
 } from "@/lib/domain/event-machine";
@@ -142,11 +144,20 @@ export async function createEventAction(_prev: ActionState, form: FormData): Pro
     const leagueId = str(form, "leagueId");
     const name = str(form, "name");
     if (name.length < 2) return fail("Give the event a name of at least 2 characters.");
+    const scheduledFor = str(form, "scheduledFor") || null;
+    if (scheduledFor !== null && !isValidEventDate(scheduledFor))
+      return fail("Use a real date and time, or leave it blank.");
     const roundsRaw = str(form, "totalRounds");
     const totalRounds = roundsRaw ? Number(roundsRaw) : undefined;
     if (totalRounds !== undefined && (!Number.isInteger(totalRounds) || totalRounds < 1 || totalRounds > 12))
       return fail("Rounds must be a whole number between 1 and 12.");
-    const event = await createEvent({ leagueId, name, createdBy: userId, totalRounds });
+    const event = await createEvent({
+      leagueId,
+      name,
+      createdBy: userId,
+      totalRounds,
+      scheduledFor,
+    });
     revalidatePath(`/leagues/${leagueId}`);
     redirect(`/events/${event.id}`);
   });
@@ -169,6 +180,32 @@ export async function leaveEventAction(_prev: ActionState, form: FormData): Prom
     await leaveEvent(eventId, userId);
     revalidatePath(`/events/${eventId}`);
     return { ok: true };
+  });
+}
+
+export async function setEventDateAction(
+  _prev: ActionState,
+  form: FormData,
+): Promise<ActionState> {
+  return guard(async () => {
+    const userId = await requireUserId();
+    const eventId = str(form, "eventId");
+    const raw = str(form, "scheduledFor");
+    const scheduledFor = raw === "" ? null : raw;
+    if (scheduledFor !== null && !isValidEventDate(scheduledFor))
+      return fail("Use a real date and time, or clear it.");
+    const { warnings } = await mutateEvent(eventId, userId, (event) => {
+      const res = setEventDate(event, userId, scheduledFor);
+      if (!res.ok) throw new Error(res.error);
+      return {
+        event: res.value.event,
+        log: { action: "event_date_set", scheduledFor },
+        warnings: res.value.warnings,
+      };
+    });
+    revalidatePath(`/events/${eventId}`);
+    revalidatePath("/leagues");
+    return { ok: true, warnings };
   });
 }
 

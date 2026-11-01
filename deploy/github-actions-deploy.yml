@@ -1,0 +1,73 @@
+# Copy this to .github/workflows/deploy.yml to enable it.
+#
+# It is shipped here rather than in place because adding a workflow file needs
+# a GitHub token with the "workflow" scope, which the deploy tooling does not
+# otherwise require.
+
+name: Deploy
+
+# Pushes to the deployment branch are verified, then shipped to the box.
+on:
+  push:
+    branches: [scaffold-swiss-webapp]
+  workflow_dispatch:
+
+concurrency:
+  # Never let two deploys race for the same server.
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Typecheck, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+        env:
+          # The build only needs this to exist; the server has the real one.
+          AUTH_SECRET: build-only-placeholder
+
+  deploy:
+    name: Ship to the server
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Authenticate to the box
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          # Pin the host key rather than trusting whatever answers on first use.
+          printf '%s\n' "${{ secrets.DEPLOY_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - # Copy this to .github/workflows/deploy.yml to enable it.
+#
+# It is shipped here rather than in place because adding a workflow file needs
+# a GitHub token with the "workflow" scope, which the deploy tooling does not
+# otherwise require.
+
+name: Deploy
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -o BatchMode=yes \
+            "root@${{ secrets.DEPLOY_HOST }}" \
+            "bash /srv/nexus-night/app/deploy/deploy.sh ${{ github.ref_name }}"
+
+      - name: Verify the public site is serving the new commit
+        run: |
+          for i in $(seq 1 10); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 https://nexusnight.duckdns.org/ || true)
+            echo "attempt $i: $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 5
+          done
+          echo "site did not return 200 after deploy"
+          exit 1

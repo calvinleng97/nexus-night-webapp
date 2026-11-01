@@ -1,4 +1,5 @@
 import { loadConfig } from "../config";
+import { isValidEventDate } from "./schedule";
 import { newId } from "../ids";
 import { pairRound } from "./pairing";
 import { computeStandings, toPairingPlayers } from "./standings";
@@ -310,6 +311,20 @@ export function forceCloseRound(
   return ok({ event: advanced.event, warnings: [...new Set([...warnings, ...advanced.warnings])] });
 }
 
+export function setEventDate(
+  event: NexusEvent,
+  actorId: UserId,
+  scheduledFor: string | null,
+): Result<{ event: NexusEvent; warnings: string[] }> {
+  if (!isManager(event, actorId)) return err("Only an event manager can change the date.");
+  if (event.status === "complete") return err("This event has already finished.");
+  if (scheduledFor !== null && !isValidEventDate(scheduledFor))
+    return err("Use a real date and time.");
+  const next = structuredClone(event);
+  next.scheduledFor = scheduledFor;
+  return ok({ event: next, warnings: [] });
+}
+
 export function emptyEvent(input: {
   id: EventId;
   leagueId: string;
@@ -317,6 +332,7 @@ export function emptyEvent(input: {
   createdBy: UserId;
   totalRounds: number;
   seed: number;
+  scheduledFor?: string | null;
   now?: string;
 }): NexusEvent {
   const now = input.now ?? new Date().toISOString();
@@ -326,6 +342,7 @@ export function emptyEvent(input: {
     name: input.name,
     status: "draft",
     totalRounds: input.totalRounds,
+    scheduledFor: input.scheduledFor ?? null,
     createdBy: input.createdBy,
     managerIds: [input.createdBy],
     players: [],

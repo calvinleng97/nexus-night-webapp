@@ -1,6 +1,7 @@
 import { loadConfig } from "../config";
 import { newId, newJoinCode, newSeed, normalizeJoinCode, userIdFromGoogleSub } from "../ids";
 import { emptyEvent } from "../domain/event-machine";
+import { eventOrderKey } from "../domain/schedule";
 import type { League, NexusEvent, User, UserId } from "../domain/types";
 import {
   appendJsonl,
@@ -57,6 +58,15 @@ async function migrate(from: number): Promise<void> {
       const league = await readJson<League>(file);
       if (!league || league.joinCode) continue;
       await writeJsonAtomic(file, { ...league, joinCode: newJoinCode() });
+    }
+  }
+  if (from < 3) {
+    // v3 introduced NexusEvent.scheduledFor. Older events are undated.
+    const files = await listJsonFiles(paths.eventsDir());
+    for (const file of files) {
+      const event = await readJson<NexusEvent>(file);
+      if (!event || event.scheduledFor !== undefined) continue;
+      await writeJsonAtomic(file, { ...event, scheduledFor: null });
     }
   }
   await writeJsonAtomic(paths.meta(), {
@@ -292,6 +302,7 @@ export async function createEvent(input: {
   name: string;
   createdBy: UserId;
   totalRounds?: number;
+  scheduledFor?: string | null;
 }): Promise<NexusEvent> {
   await storeReady();
   const cfg = loadConfig();
@@ -306,6 +317,7 @@ export async function createEvent(input: {
     name: input.name.trim(),
     createdBy: input.createdBy,
     totalRounds: input.totalRounds ?? cfg.event.defaultRounds,
+    scheduledFor: input.scheduledFor ?? null,
     seed: newSeed(),
   });
   await writeJsonAtomic(paths.event(event.id), event);
@@ -329,7 +341,7 @@ export async function listEventsForLeague(leagueId: string): Promise<NexusEvent[
   const loaded = await Promise.all(files.map((f) => readJson<NexusEvent>(f)));
   return loaded
     .filter((e): e is NexusEvent => e !== null && e.leagueId === leagueId)
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    .sort((a, b) => eventOrderKey(b).localeCompare(eventOrderKey(a)));
 }
 
 /** Every event the given player has joined, newest first. */

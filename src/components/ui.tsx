@@ -188,6 +188,19 @@ export function Tag({
   );
 }
 
+/** A scheduled date, as a chip rather than a muted line. */
+export function DateChip({ children, tone = "plain" }: { children: ReactNode; tone?: "plain" | "accent" }) {
+  const cls =
+    tone === "accent"
+      ? "border-accent/35 bg-accent/10 text-accent"
+      : "border-hair bg-raised text-fg-dim";
+  return (
+    <span className={`inline-flex items-center rounded-lg border px-2.5 py-1 text-xs font-medium ${cls}`}>
+      {children}
+    </span>
+  );
+}
+
 /** Small all-caps label that reads as design, not as muted metadata. */
 export function MicroLabel({ children }: { children: ReactNode }) {
   return (

@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { currentUserId } from "@/lib/auth";
 import { loadConfig } from "@/lib/config";
 import { computeLeagueElo } from "@/lib/domain/elo";
+import { formatEventDate } from "@/lib/domain/schedule";
 import { getLeague, getUsers, listEventsForLeague } from "@/lib/store/repo";
 import { ActionForm } from "@/components/action-form";
 import {
@@ -10,6 +11,7 @@ import {
   Badge,
   Card,
   CountPill,
+  DateChip,
   Empty,
   Field,
   PageTitle,
@@ -145,7 +147,7 @@ export default async function LeaguePage(props: PageProps<"/leagues/[id]">) {
             label="Create event"
             variant="primary"
           >
-            <div className="mb-3 grid gap-3 sm:grid-cols-[1fr_7rem]">
+            <div className="mb-3 space-y-3">
               <Field label="Name">
                 <input
                   name="name"
@@ -156,16 +158,21 @@ export default async function LeaguePage(props: PageProps<"/leagues/[id]">) {
                   placeholder="Nexus Night #1"
                 />
               </Field>
-              <Field label="Rounds">
-                <input
-                  name="totalRounds"
-                  type="number"
-                  min={1}
-                  max={12}
-                  defaultValue={cfg.event.defaultRounds}
-                  className={inputClass}
-                />
-              </Field>
+              <div className="grid gap-3 sm:grid-cols-[1fr_7rem]">
+                <Field label="Date & time">
+                  <input name="scheduledFor" type="datetime-local" className={inputClass} />
+                </Field>
+                <Field label="Rounds">
+                  <input
+                    name="totalRounds"
+                    type="number"
+                    min={1}
+                    max={12}
+                    defaultValue={cfg.event.defaultRounds}
+                    className={inputClass}
+                  />
+                </Field>
+              </div>
             </div>
           </ActionForm>
         </Card>
@@ -200,6 +207,11 @@ export default async function LeaguePage(props: PageProps<"/leagues/[id]">) {
                   </span>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
+                  {formatEventDate(e.scheduledFor) ? (
+                    <DateChip tone={e.status === "running" ? "accent" : "plain"}>
+                      {formatEventDate(e.scheduledFor)}
+                    </DateChip>
+                  ) : null}
                   {e.players.length === 0 ? (
                     <Tag tone="warn">Needs players</Tag>
                   ) : (

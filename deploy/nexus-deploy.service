@@ -1,0 +1,13 @@
+# Pull-based deploy: checks the deployment branch and ships it if it moved.
+# Driven by nexus-deploy.timer; also runnable by hand:
+#   sudo systemctl start nexus-deploy
+[Unit]
+Description=Deploy Nexus Night from origin
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/srv/nexus-night/app/deploy/deploy.sh scaffold-swiss-webapp
+# deploy.sh exits 0 immediately when the branch has not moved.
+TimeoutStartSec=900

@@ -2,16 +2,19 @@ import { notFound, redirect } from "next/navigation";
 import { currentUserId } from "@/lib/auth";
 import { currentRound, pairingForUser } from "@/lib/domain/event-machine";
 import { computeStandings, recordLabel } from "@/lib/domain/standings";
+import { formatEventDate } from "@/lib/domain/schedule";
 import type { GameScore, NexusEvent, Pairing, User, UserId } from "@/lib/domain/types";
 import { getEvent, getLeague, getUsers } from "@/lib/store/repo";
 import { ActionForm } from "@/components/action-form";
 import { Bracket } from "@/components/bracket";
+import { EventDateControl } from "@/components/event-date";
 import { ManagerScoreSelect, ScoreSelect } from "@/components/score-select";
 import {
   BackLink,
   Badge,
   Card,
   CountPill,
+  DateChip,
   Empty,
   MicroLabel,
   PageTitle,
@@ -174,6 +177,11 @@ export default async function EventPage(props: PageProps<"/events/[id]">) {
       <div className="mt-3">
         <PageTitle>{event.name}</PageTitle>
       </div>
+      {formatEventDate(event.scheduledFor) ? (
+        <div className="-mt-3 mb-6">
+          <DateChip tone="accent">{formatEventDate(event.scheduledFor)}</DateChip>
+        </div>
+      ) : null}
 
       {/* --------------------------------------------------------- draft */}
       {event.status === "draft" ? (
@@ -220,17 +228,22 @@ export default async function EventPage(props: PageProps<"/events/[id]">) {
           </Card>
 
           {isManager ? (
-            <Card tone="raised" className="mb-7 p-5">
-              <MicroLabel>Manager</MicroLabel>
-              <div className="mt-3">
-                <ActionForm
-                  action={startEventAction}
-                  fields={{ eventId: event.id }}
-                  label="Start event →"
-                  variant="primary"
-                  size="lg"
-                  confirm="Pair round 1 now?"
-                />
+            <Card tone="raised" className="mb-7 space-y-5 p-5">
+              <div>
+                <MicroLabel>Manager</MicroLabel>
+                <div className="mt-3">
+                  <ActionForm
+                    action={startEventAction}
+                    fields={{ eventId: event.id }}
+                    label="Start event →"
+                    variant="primary"
+                    size="lg"
+                    confirm="Pair round 1 now?"
+                  />
+                </div>
+              </div>
+              <div className="border-t border-hair-soft pt-5">
+                <EventDateControl eventId={event.id} value={event.scheduledFor} />
               </div>
             </Card>
           ) : null}
@@ -382,6 +395,10 @@ export default async function EventPage(props: PageProps<"/events/[id]">) {
                 />
               </div>
             ) : null}
+
+            <div className="border-t border-hair-soft pt-5">
+              <EventDateControl eventId={event.id} value={event.scheduledFor} />
+            </div>
 
             <div>
               <SectionHead>Drop a player</SectionHead>

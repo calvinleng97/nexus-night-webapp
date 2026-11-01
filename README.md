@@ -243,6 +243,45 @@ sudo ufw allow 80/tcp && sudo ufw allow 443/tcp
 
 ---
 
+## Deploying on push
+
+Two options ship in `deploy/`. Both run the same `deploy/deploy.sh`, which is
+idempotent, rebuilds, restarts, health-checks, and **rolls back to the previous
+commit if the build or the health check fails** — so a bad push cannot leave
+the site down.
+
+### Pull-based (default, no credentials anywhere)
+
+A timer on the box checks the branch every minute and deploys it if it moved.
+Nothing inbound, no private key in GitHub.
+
+```bash
+sudo cp deploy/nexus-deploy.{service,timer} /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now nexus-deploy.timer
+systemctl list-timers nexus-deploy.timer
+```
+
+The box needs read access to the repo: add
+`/srv/nexus-night/.ssh/id_ed25519.pub` as a **read-only deploy key** under the
+repository's Settings → Deploy keys.
+
+### Push-based (GitHub Actions)
+
+`deploy/github-actions-deploy.yml` runs typecheck, tests and a build, then
+SSHes in. Copy it to `.github/workflows/deploy.yml` to enable it — adding a
+workflow file needs a token with the `workflow` scope, so it does not ship in
+place. It
+and deploys. It is immediate and gives logs in GitHub, at the cost of holding a
+private key as a repository secret. It needs:
+
+- a key whose public half is in the box's `root` `authorized_keys`, ideally
+  behind a forced command so the key can only deploy:
+  `command="/srv/nexus-night/app/deploy/deploy.sh scaffold-swiss-webapp",no-pty,no-port-forwarding,...`
+- repository secrets `DEPLOY_SSH_KEY`, `DEPLOY_HOST`, `DEPLOY_KNOWN_HOSTS`
+
+---
+
 ## The data directory
 
 Point `dataDir` at any directory; the app writes nowhere else. A test asserts that.

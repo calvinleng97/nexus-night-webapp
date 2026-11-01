@@ -97,6 +97,15 @@ export interface NexusEvent {
   status: EventStatus;
   /** Number of Swiss rounds. Defaults to config.event.defaultRounds (3). */
   totalRounds: number;
+  /**
+   * When the event is scheduled, as a naive local wall-clock string
+   * ("2026-11-06T19:00"), or null if undated.
+   *
+   * Deliberately not a UTC instant. Everyone at a games night is in the same
+   * room, so "Thursday at 19:00" is what people mean; storing an instant would
+   * invite the whole timezone-conversion class of bug for no benefit.
+   */
+  scheduledFor: string | null;
   createdBy: UserId;
   managerIds: UserId[];
   players: EventPlayer[];
