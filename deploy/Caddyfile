@@ -4,6 +4,10 @@
 #
 # Replace the hostname with your own. Google OAuth will not accept a bare IP,
 # which is why this needs a real name pointing at the box.
+#
+# Logging is left to journald (journalctl -u caddy). The packaged caddy unit
+# sandboxes /var/log, so a `log { output file ... }` block here fails at
+# startup with "permission denied" even after chown-ing the directory.
 
 nexusnight.duckdns.org {
 	encode zstd gzip
@@ -11,10 +15,5 @@ nexusnight.duckdns.org {
 	reverse_proxy localhost:3000 {
 		header_up X-Forwarded-Proto {scheme}
 		header_up X-Forwarded-Host {host}
-	}
-
-	log {
-		output file /var/log/caddy/nexus-night.log
-		format json
 	}
 }

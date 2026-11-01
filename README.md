@@ -187,7 +187,17 @@ sudo -u nexus npm ci
 sudo -u nexus npm run build
 ```
 
-Config at `/etc/nexus-night/config.json`:
+The service runs as `nexus`, so it must be able to traverse its own config
+directory. Owning the directory by `root:nexus` is what makes that work —
+`750 root:root` leaves the service unable to see the file at all, and the app
+reports the config as missing rather than unreadable:
+
+```bash
+sudo chown root:nexus /etc/nexus-night
+sudo chmod 750 /etc/nexus-night
+```
+
+Config at `/etc/nexus-night/config.json` (`chown root:nexus`, `chmod 640`):
 
 ```json
 {
@@ -199,7 +209,7 @@ Config at `/etc/nexus-night/config.json`:
 }
 ```
 
-Secrets at `/etc/nexus-night/env` (`chmod 600`, owned by `nexus`):
+Secrets at `/etc/nexus-night/env` (`chown root:nexus`, `chmod 640`):
 
 ```
 AUTH_SECRET=...                      # openssl rand -base64 32
@@ -223,8 +233,13 @@ sudo cp deploy/Caddyfile /etc/caddy/Caddyfile   # edit the hostname first
 sudo systemctl reload caddy
 ```
 
-Caddy obtains a Let's Encrypt certificate on first start. Ports 80 and 443 must be
-reachable.
+Caddy obtains a Let's Encrypt certificate on first start. Ports 80 and 443 must
+be reachable — on a stock Ubuntu box `ufw` is active and allows only SSH, so
+open them first or certificate issuance will silently never complete:
+
+```bash
+sudo ufw allow 80/tcp && sudo ufw allow 443/tcp
+```
 
 ---
 
