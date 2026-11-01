@@ -59,7 +59,6 @@ async function main() {
   rule("2. Organiser creates a league");
   const league = await repo.createLeague({
     name: `Thursday Nexus (demo ${new Date().toISOString().slice(0, 10)})`,
-    description: "Weekly, at my place",
     createdBy: organiser.id,
   });
   console.log(`   "${league.name}"  ${league.id}`);

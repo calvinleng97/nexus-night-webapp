@@ -97,14 +97,12 @@ export function displayName(users: Map<UserId, User>, id: UserId): string {
 
 export async function createLeague(input: {
   name: string;
-  description: string;
   createdBy: UserId;
 }): Promise<League> {
   await storeReady();
   const league: League = {
     id: newId("lg"),
     name: input.name.trim(),
-    description: input.description.trim(),
     createdBy: input.createdBy,
     managerIds: [input.createdBy],
     memberIds: [input.createdBy],
@@ -233,6 +231,12 @@ export async function listEventsForLeague(leagueId: string): Promise<NexusEvent[
   return loaded
     .filter((e): e is NexusEvent => e !== null && e.leagueId === leagueId)
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+/** Every event the given player has joined, newest first. */
+export async function listEventsForUser(userId: UserId): Promise<NexusEvent[]> {
+  const all = await listAllEvents();
+  return all.filter((e) => e.players.some((p) => p.userId === userId));
 }
 
 export async function listAllEvents(): Promise<NexusEvent[]> {

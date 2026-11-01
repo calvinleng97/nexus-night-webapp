@@ -1,91 +1,119 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUserId } from "@/lib/auth";
-import { getUsers, listLeagues } from "@/lib/store/repo";
+import { listAllEvents, listLeagues } from "@/lib/store/repo";
 import { ActionForm } from "@/components/action-form";
-import { Badge, Empty, Field, Panel, PageTitle, inputClass } from "@/components/ui";
+import { Badge, Card, Empty, Field, PageTitle, SectionHead, inputClass } from "@/components/ui";
 import { createLeagueAction, joinLeagueAction } from "../actions";
 
-export default async function LeaguesPage() {
+export default async function LeaguesPage(props: PageProps<"/leagues">) {
   const userId = await currentUserId();
   if (!userId) redirect("/");
+  const { new: creating } = await props.searchParams;
 
-  const leagues = await listLeagues();
-  const users = await getUsers(leagues.flatMap((l) => l.memberIds));
+  const [leagues, events] = await Promise.all([listLeagues(), listAllEvents()]);
+  const eventCount = new Map<string, number>();
+  for (const e of events) eventCount.set(e.leagueId, (eventCount.get(e.leagueId) ?? 0) + 1);
+
   const mine = leagues.filter((l) => l.memberIds.includes(userId));
   const others = leagues.filter((l) => !l.memberIds.includes(userId));
 
   return (
-    <div className="space-y-6">
-      <PageTitle sub="Any signed-in player can see and join any league.">Leagues</PageTitle>
+    <div>
+      <PageTitle>Leagues</PageTitle>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Yours</h2>
-        {mine.length === 0 ? (
-          <Empty>You haven&apos;t joined a league yet.</Empty>
-        ) : (
-          <ul className="space-y-3">
-            {mine.map((l) => (
-              <Panel as="li" key={l.id}>
-                <div className="flex items-start gap-3">
-                  <div className="min-w-0 flex-1">
-                    <Link href={`/leagues/${l.id}`} className="font-medium hover:text-accent">
-                      {l.name}
-                    </Link>
-                    <p className="mt-0.5 text-sm text-muted">
-                      {l.memberIds.length} member{l.memberIds.length === 1 ? "" : "s"}
-                      {l.description ? ` · ${l.description}` : ""}
-                    </p>
-                  </div>
-                  {l.managerIds.includes(userId) ? <Badge tone="accent">Manager</Badge> : null}
-                </div>
-              </Panel>
-            ))}
-          </ul>
-        )}
-      </section>
+      <SectionHead
+        action={
+          creating ? null : (
+            <Link
+              href="/leagues?new=1"
+              aria-label="Create a league"
+              title="Create a league"
+              className="inline-flex size-7 items-center justify-center rounded-lg border border-hair bg-raised text-base leading-none text-fg-dim transition-colors hover:border-accent/40 hover:text-accent"
+            >
+              <span aria-hidden>+</span>
+            </Link>
+          )
+        }
+      >
+        Yours
+      </SectionHead>
 
-      {others.length > 0 ? (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Open to join</h2>
-          <ul className="space-y-3">
-            {others.map((l) => (
-              <Panel as="li" key={l.id}>
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium">{l.name}</p>
-                    <p className="mt-0.5 text-sm text-muted">
-                      run by {users.get(l.createdBy)?.name ?? "someone"} ·{" "}
-                      {l.memberIds.length} member{l.memberIds.length === 1 ? "" : "s"}
-                    </p>
-                  </div>
-                  <ActionForm
-                    action={joinLeagueAction}
-                    fields={{ leagueId: l.id }}
-                    label="Join"
-                    variant="primary"
-                    compact
-                  />
-                </div>
-              </Panel>
-            ))}
-          </ul>
-        </section>
+      {creating ? (
+        <Card className="mb-3 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-medium">New league</h3>
+            <Link href="/leagues" className="px-1 text-sm text-fg-faint hover:text-fg">
+              Cancel
+            </Link>
+          </div>
+          <ActionForm action={createLeagueAction} label="Create league" variant="primary">
+            <div className="mb-3">
+              <Field label="Name">
+                <input
+                  name="name"
+                  required
+                  autoFocus
+                  maxLength={80}
+                  className={inputClass}
+                  placeholder="Thursday Nexus"
+                />
+              </Field>
+            </div>
+          </ActionForm>
+        </Card>
       ) : null}
 
-      <Panel>
-        <h2 className="mb-3 font-medium">Start a new league</h2>
-        <ActionForm action={createLeagueAction} label="Create league" variant="primary">
-          <div className="mb-3 space-y-3">
-            <Field label="Name">
-              <input name="name" required maxLength={80} className={inputClass} placeholder="Thursday Nexus Night" />
-            </Field>
-            <Field label="Description" hint="Optional.">
-              <input name="description" maxLength={500} className={inputClass} placeholder="Weekly at my place" />
-            </Field>
-          </div>
-        </ActionForm>
-      </Panel>
+      {mine.length === 0 && !creating ? (
+        <Empty>
+          No leagues yet — tap <span className="text-fg-dim">+</span> to make one.
+        </Empty>
+      ) : (
+        <ul className="space-y-2.5">
+          {mine.map((l) => (
+            <Card as="li" key={l.id} interactive>
+              <Link href={`/leagues/${l.id}`} className="flex items-center gap-3 p-4">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{l.name}</p>
+                  <p className="mt-0.5 text-sm text-fg-faint">
+                    {eventCount.get(l.id) ?? 0} event{(eventCount.get(l.id) ?? 0) === 1 ? "" : "s"}
+                    {" · "}
+                    {l.memberIds.length} player{l.memberIds.length === 1 ? "" : "s"}
+                  </p>
+                </div>
+                {l.managerIds.includes(userId) ? <Badge tone="accent">Manager</Badge> : null}
+                <span aria-hidden className="text-fg-faint">
+                  →
+                </span>
+              </Link>
+            </Card>
+          ))}
+        </ul>
+      )}
+
+      {others.length > 0 ? (
+        <div className="mt-9">
+          <SectionHead>Open to join</SectionHead>
+          <ul className="space-y-2">
+            {others.map((l) => (
+              <li key={l.id} className="flex items-center gap-3 px-1 py-2">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm">{l.name}</p>
+                  <p className="text-xs text-fg-faint">
+                    {l.memberIds.length} player{l.memberIds.length === 1 ? "" : "s"}
+                  </p>
+                </div>
+                <ActionForm
+                  action={joinLeagueAction}
+                  fields={{ leagueId: l.id }}
+                  label="Join"
+                  compact
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </div>
   );
 }

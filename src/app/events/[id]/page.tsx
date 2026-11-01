@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { currentUserId } from "@/lib/auth";
 import { currentRound, pairingForUser } from "@/lib/domain/event-machine";
@@ -6,8 +5,9 @@ import { computeStandings, recordLabel } from "@/lib/domain/standings";
 import type { GameScore, NexusEvent, Pairing, User, UserId } from "@/lib/domain/types";
 import { getEvent, getLeague, getUsers } from "@/lib/store/repo";
 import { ActionForm } from "@/components/action-form";
+import { Bracket } from "@/components/bracket";
 import { ManagerScoreSelect, ScoreSelect } from "@/components/score-select";
-import { Badge, Empty, Panel, PageTitle } from "@/components/ui";
+import { BackLink, Badge, Card, Empty, PageTitle, Score, SectionHead } from "@/components/ui";
 import {
   confirmScoreAction,
   disputeScoreAction,
@@ -24,183 +24,149 @@ function fromSideOf(score: GameScore, iAmA: boolean): { mine: number; theirs: nu
   return iAmA ? { mine: score.a, theirs: score.b } : { mine: score.b, theirs: score.a };
 }
 
-function name(users: Map<UserId, User>, id: UserId | null): string {
-  if (!id) return "—";
-  return users.get(id)?.name ?? "Unknown player";
-}
-
 function MyMatch({
   event,
   pairing,
-  users,
+  nameOf,
   userId,
 }: {
   event: NexusEvent;
   pairing: Pairing;
-  users: Map<UserId, User>;
+  nameOf: (id: UserId | null) => string;
   userId: UserId;
 }) {
-  if (pairing.kind === "bye") {
+  if (pairing.kind === "bye")
     return (
-      <Panel className="border-accent-dim/50 bg-accent/5">
-        <Badge tone="accent">Round {pairing.roundNumber}</Badge>
-        <p className="mt-2 text-lg font-medium">You have the bye this round.</p>
-        <p className="mt-1 text-sm text-muted">
-          Counted as a win. Sit this one out — the next round appears once everyone else reports.
+      <Card tone="accent" className="p-5">
+        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-accent/80">
+          Round {pairing.roundNumber}
         </p>
-      </Panel>
+        <p className="mt-2 text-xl font-semibold">You have the bye</p>
+        <p className="mt-1 text-sm text-fg-dim">
+          Counted as a win. Your next opponent appears once the round finishes.
+        </p>
+      </Card>
     );
-  }
 
   const iAmA = pairing.a === userId;
   const opponent = iAmA ? pairing.b : pairing.a;
   const common = { eventId: event.id, pairingId: pairing.id };
+  const report = pairing.report;
 
   return (
-    <Panel className="border-accent-dim/50 bg-accent/5">
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge tone="accent">Round {pairing.roundNumber}</Badge>
-        {pairing.rematch ? <Badge tone="draw">Rematch</Badge> : null}
-        {pairing.kind === "forfeit" ? <Badge tone="loss">Forfeit</Badge> : null}
+    <Card tone="accent" className="p-5">
+      <div className="flex items-center gap-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-accent/80">
+          Round {pairing.roundNumber}
+        </p>
+        {pairing.rematch ? <Badge tone="draw">rematch</Badge> : null}
       </div>
-      <p className="mt-2 text-sm text-muted">Your opponent</p>
-      <p className="text-2xl font-semibold tracking-tight">{name(users, opponent)}</p>
+      <p className="mt-2 text-sm text-fg-dim">You play</p>
+      <p className="text-2xl font-semibold leading-tight tracking-tight">{nameOf(opponent)}</p>
 
       {pairing.status === "pending" ? (
-        <div className="mt-4">
-          <p className="mb-2 text-sm text-muted">Report the best-of-three when you&apos;re done.</p>
-          <ActionForm action={submitScoreAction} fields={common} label="Submit result" variant="primary">
+        <div className="mt-5">
+          <ActionForm action={submitScoreAction} fields={common} label="Submit" variant="primary">
             <ScoreSelect />
           </ActionForm>
         </div>
       ) : null}
 
-      {pairing.status === "awaiting_confirmation" && pairing.report ? (
-        pairing.report.submittedBy === userId ? (
-          (() => {
-            const s = fromSideOf(pairing.report.score, iAmA);
-            return (
-              <p className="mt-4 text-sm">
-                You reported{" "}
-                <strong>
-                  {s.mine}-{s.theirs}
-                </strong>
-                . Waiting on {name(users, opponent)} to confirm.
-              </p>
-            );
-          })()
+      {pairing.status === "awaiting_confirmation" && report ? (
+        report.submittedBy === userId ? (
+          <p className="mt-5 text-sm text-fg-dim">
+            You reported{" "}
+            <span className="font-mono tabular-nums text-fg">
+              {fromSideOf(report.score, iAmA).mine}–{fromSideOf(report.score, iAmA).theirs}
+            </span>
+            . Waiting on {nameOf(opponent)}.
+          </p>
         ) : (
-          (() => {
-            const s = fromSideOf(pairing.report.score, iAmA);
-            return (
-              <div className="mt-4 space-y-3">
-                <p className="text-sm">
-                  {name(users, opponent)} reported that you went{" "}
-                  <strong>
-                    {s.mine}-{s.theirs}
-                  </strong>
-                  . Is that right?
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <ActionForm
-                    action={confirmScoreAction}
-                    fields={common}
-                    label="Confirm"
-                    variant="primary"
-                    compact
-                  />
-                  <ActionForm
-                    action={disputeScoreAction}
-                    fields={common}
-                    label="That's wrong"
-                    variant="danger"
-                    compact
-                  />
-                </div>
-              </div>
-            );
-          })()
+          <div className="mt-5">
+            <p className="text-sm">
+              {nameOf(opponent)} says you went{" "}
+              <span className="font-mono tabular-nums">
+                {fromSideOf(report.score, iAmA).mine}–{fromSideOf(report.score, iAmA).theirs}
+              </span>
+              .
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <ActionForm
+                action={confirmScoreAction}
+                fields={common}
+                label="Confirm"
+                variant="primary"
+                compact
+              />
+              <ActionForm
+                action={disputeScoreAction}
+                fields={common}
+                label="That's wrong"
+                variant="danger"
+                compact
+              />
+            </div>
+          </div>
         )
       ) : null}
 
       {pairing.status === "disputed" ? (
-        <p className="mt-4 text-sm text-loss">
-          This result is disputed. An event manager needs to settle it before the round can close.
-        </p>
+        <p className="mt-5 text-sm text-loss">Disputed — a manager will settle it.</p>
       ) : null}
 
-      {pairing.status === "confirmed" && pairing.report ? (
-        (() => {
-          const s = fromSideOf(pairing.report.score, iAmA);
-          const verdict = s.mine > s.theirs ? "Win" : s.mine < s.theirs ? "Loss" : "Draw";
-          return (
-            <p className="mt-4 text-sm">
-              Final: <strong>{verdict}</strong> {s.mine}-{s.theirs}. Waiting on the rest of the
-              round.
-            </p>
-          );
-        })()
+      {pairing.status === "confirmed" && report ? (
+        <p className="mt-5 text-sm text-fg-dim">
+          Final <Score {...fromSideOf(report.score, iAmA)} /> — waiting on the rest of the round.
+        </p>
       ) : null}
-    </Panel>
+    </Card>
   );
 }
 
-export default async function EventPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
+export default async function EventPage(props: PageProps<"/events/[id]">) {
+  const { id } = await props.params;
   const userId = await currentUserId();
   if (!userId) redirect("/");
 
   const event = await getEvent(id);
   if (!event) notFound();
-  const league = await getLeague(event.leagueId);
-
-  const users = await getUsers([
-    ...event.players.map((p) => p.userId),
-    ...event.managerIds,
+  const [league, users] = await Promise.all([
+    getLeague(event.leagueId),
+    getUsers([...event.players.map((p) => p.userId), ...event.managerIds]),
   ]);
+
+  const nameOf = (uid: UserId | null) =>
+    uid ? ((users as Map<UserId, User>).get(uid)?.name ?? "Unknown") : "—";
   const standings = computeStandings(event);
   const round = currentRound(event);
   const isManager = event.managerIds.includes(userId);
   const isPlayer = event.players.some((p) => p.userId === userId);
   const myPairing = round ? pairingForUser(round, userId) : null;
-  const openCount = round?.pairings.filter((p) => p.status !== "confirmed").length ?? 0;
+  const open = round?.pairings.filter((p) => p.status !== "confirmed") ?? [];
 
   return (
-    <div className="space-y-6">
-      <PageTitle
-        sub={
-          league ? (
-            <>
-              <Link href={`/leagues/${league.id}`} className="underline hover:text-white">
-                {league.name}
-              </Link>
-              {" · "}
-              {event.status === "draft"
-                ? `${event.totalRounds} rounds planned`
-                : `round ${round?.number ?? 0} of ${event.totalRounds}`}
-            </>
-          ) : undefined
-        }
-      >
-        {event.name}
-      </PageTitle>
+    <div>
+      <BackLink href={league ? `/leagues/${league.id}` : "/leagues"}>
+        {league?.name ?? "Leagues"}
+      </BackLink>
+      <div className="mt-3">
+        <PageTitle>{event.name}</PageTitle>
+      </div>
 
-      {/* -------------------------------------------------- draft */}
+      {/* --------------------------------------------------------- draft */}
       {event.status === "draft" ? (
         <>
-          <Panel>
-            <h2 className="font-medium">
-              {event.players.length} player{event.players.length === 1 ? "" : "s"} signed up
-            </h2>
-            <p className="mt-1 text-sm text-muted">
-              Pairings are generated when a manager starts the event.
+          <Card className="mb-7 p-5">
+            <p className="text-sm text-fg-dim">
+              {event.players.length} player{event.players.length === 1 ? "" : "s"} signed up ·{" "}
+              {event.totalRounds} rounds
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               {isPlayer ? (
                 <ActionForm
                   action={leaveEventAction}
                   fields={{ eventId: event.id }}
-                  label="Leave event"
+                  label="Leave"
                   variant="ghost"
                   compact
                 />
@@ -224,176 +190,123 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
                 />
               ) : null}
             </div>
-          </Panel>
-          <Panel>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted">
-              Signed up
-            </h3>
-            {event.players.length === 0 ? (
-              <Empty>Nobody yet.</Empty>
-            ) : (
-              <ul className="divide-y divide-line">
-                {event.players.map((p) => (
-                  <li key={p.userId} className="py-2 first:pt-0 last:pb-0">
-                    {name(users, p.userId)}
-                    {p.userId === userId ? <span className="text-muted"> (you)</span> : null}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Panel>
-        </>
-      ) : null}
+          </Card>
 
-      {/* ------------------------------------------------ running */}
-      {event.status === "running" && round ? (
-        <>
-          {myPairing ? (
-            <MyMatch event={event} pairing={myPairing} users={users} userId={userId} />
-          ) : isPlayer ? (
-            <Panel>
-              <p className="text-sm text-muted">
-                You were dropped from this event, so you have no match this round.
-              </p>
-            </Panel>
+          <SectionHead count={event.players.length}>Signed up</SectionHead>
+          {event.players.length === 0 ? (
+            <Empty>Nobody yet.</Empty>
           ) : (
-            <Panel>
-              <p className="text-sm text-muted">You&apos;re spectating — you didn&apos;t join this event.</p>
-            </Panel>
-          )}
-
-          <Panel>
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="font-medium">Round {round.number}</h2>
-              <span className="text-sm text-muted">
-                {openCount === 0 ? "all reported" : `${openCount} outstanding`}
-              </span>
-            </div>
-            <ul className="mt-3 divide-y divide-line">
-              {round.pairings.map((p) => (
-                <li key={p.id} className="flex flex-wrap items-center gap-2 py-2.5">
-                  <span className="min-w-0 flex-1 text-sm">
-                    {p.b === null ? (
-                      <>
-                        {name(users, p.a)} <span className="text-muted">— bye</span>
-                      </>
-                    ) : (
-                      <>
-                        {name(users, p.a)} <span className="text-muted">vs</span> {name(users, p.b)}
-                      </>
-                    )}
-                  </span>
-                  {p.rematch ? <Badge tone="draw">rematch</Badge> : null}
-                  {p.status === "confirmed" && p.report ? (
-                    <Badge tone="win">
-                      {p.report.score.a}-{p.report.score.b}
-                    </Badge>
-                  ) : p.status === "confirmed" ? (
-                    <Badge tone="win">bye</Badge>
-                  ) : p.status === "disputed" ? (
-                    <Badge tone="loss">disputed</Badge>
-                  ) : p.status === "awaiting_confirmation" ? (
-                    <Badge tone="draw">awaiting confirm</Badge>
-                  ) : (
-                    <Badge>pending</Badge>
-                  )}
+            <ul className="flex flex-wrap gap-2">
+              {event.players.map((p) => (
+                <li
+                  key={p.userId}
+                  className={`rounded-full border px-3 py-1.5 text-sm ${
+                    p.userId === userId
+                      ? "border-accent/40 bg-accent/10 text-accent"
+                      : "border-hair-soft bg-raised text-fg-dim"
+                  }`}
+                >
+                  {nameOf(p.userId)}
                 </li>
               ))}
             </ul>
-          </Panel>
+          )}
         </>
       ) : null}
 
-      {/* ----------------------------------------------- standings */}
-      {event.status !== "draft" ? (
-        <Panel>
-          <h2 className="mb-1 font-medium">Standings</h2>
-          <p className="mb-3 text-xs text-muted">
-            Records only — equal records share a rank and no winner is crowned. Every game score is
-            saved, so tiebreakers stay computable later.
+      {/* ------------------------------------------------------- running */}
+      {event.status === "running" && round ? (
+        <div className="mb-8 space-y-3">
+          {myPairing ? (
+            <MyMatch event={event} pairing={myPairing} nameOf={nameOf} userId={userId} />
+          ) : (
+            <Card className="p-4">
+              <p className="text-sm text-fg-faint">
+                {isPlayer
+                  ? "You were dropped from this event."
+                  : "You're spectating — you didn't join this event."}
+              </p>
+            </Card>
+          )}
+          <p className="px-1 text-sm text-fg-faint">
+            {open.length === 0
+              ? "All results in — the next round is being paired."
+              : `${open.length} match${open.length === 1 ? "" : "es"} still to report.`}
           </p>
-          <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-            <table className="w-full min-w-[22rem] text-sm">
+        </div>
+      ) : null}
+
+      {/* ----------------------------------------------------- standings */}
+      {event.status !== "draft" ? (
+        <div className="mb-9">
+          <SectionHead>Standings</SectionHead>
+          <Card className="overflow-hidden">
+            <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-line text-left text-xs uppercase tracking-wide text-muted">
-                  <th className="py-2 pr-2 font-medium">#</th>
-                  <th className="py-2 pr-2 font-medium">Player</th>
-                  <th className="py-2 pr-2 text-right font-medium">Pts</th>
-                  <th className="py-2 pr-2 text-right font-medium">Record</th>
-                  <th className="py-2 text-right font-medium">Games</th>
+                <tr className="border-b border-hair text-left text-xs uppercase tracking-wide text-fg-faint">
+                  <th className="py-2.5 pl-4 pr-2 font-medium">#</th>
+                  <th className="py-2.5 pr-2 font-medium">Player</th>
+                  <th className="py-2.5 pr-2 text-right font-medium">Pts</th>
+                  <th className="py-2.5 pr-4 text-right font-medium">W–L</th>
                 </tr>
               </thead>
               <tbody>
                 {standings.map((s) => (
-                  <tr key={s.userId} className="border-b border-line/60 last:border-0">
-                    <td className="py-2 pr-2 text-muted">{s.rank}</td>
-                    <td className="py-2 pr-2">
-                      <span className={s.dropped ? "text-muted line-through" : ""}>
-                        {name(users, s.userId)}
+                  <tr
+                    key={s.userId}
+                    className={`border-b border-hair-soft last:border-0 ${
+                      s.userId === userId ? "bg-accent/5" : ""
+                    }`}
+                  >
+                    <td className="py-2.5 pl-4 pr-2 text-fg-faint">{s.rank}</td>
+                    <td className="py-2.5 pr-2">
+                      <span
+                        className={`${s.dropped ? "text-fg-faint line-through" : ""} ${
+                          s.userId === userId ? "text-accent" : ""
+                        }`}
+                      >
+                        {nameOf(s.userId)}
                       </span>
-                      {s.userId === userId ? <span className="text-muted"> (you)</span> : null}
-                      {s.byes > 0 ? <span className="ml-1 text-xs text-muted">·bye</span> : null}
+                      {s.byes > 0 ? (
+                        <span className="ml-1.5 text-xs text-fg-faint">bye</span>
+                      ) : null}
                     </td>
-                    <td className="py-2 pr-2 text-right font-medium">{s.matchPoints}</td>
-                    <td className="py-2 pr-2 text-right">{recordLabel(s)}</td>
-                    <td className="py-2 text-right text-muted">
-                      {s.gamesWon}-{s.gamesLost}
+                    <td className="py-2.5 pr-2 text-right font-mono tabular-nums">
+                      {s.matchPoints}
+                    </td>
+                    <td className="py-2.5 pr-4 text-right font-mono tabular-nums text-fg-dim">
+                      {recordLabel(s)}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
-        </Panel>
+          </Card>
+        </div>
       ) : null}
 
-      {/* ------------------------------------------------- history */}
-      {event.rounds.length > 1 || event.status === "complete" ? (
-        <Panel>
-          <h2 className="mb-3 font-medium">All rounds</h2>
-          <div className="space-y-4">
-            {event.rounds.map((r) => (
-              <div key={r.number}>
-                <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-                  Round {r.number}
-                  {r.closedAt ? "" : " (open)"}
-                </h3>
-                <ul className="mt-1 divide-y divide-line/60 text-sm">
-                  {r.pairings.map((p) => (
-                    <li key={p.id} className="flex items-center gap-2 py-1.5">
-                      <span className="min-w-0 flex-1">
-                        {p.b === null
-                          ? `${name(users, p.a)} — bye`
-                          : `${name(users, p.a)} vs ${name(users, p.b)}`}
-                      </span>
-                      <span className="text-muted">
-                        {p.report ? `${p.report.score.a}-${p.report.score.b}` : p.b === null ? "win" : "—"}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </Panel>
+      {/* -------------------------------------------------------- bracket */}
+      {event.rounds.length > 0 ? (
+        <div className="mb-9">
+          <SectionHead>Bracket</SectionHead>
+          <Bracket rounds={event.rounds} nameOf={nameOf} viewerId={userId} />
+        </div>
       ) : null}
 
-      {/* ------------------------------------------ manager tools */}
+      {/* -------------------------------------------------- manager tools */}
       {isManager && event.status !== "draft" ? (
-        <Panel className="border-accent-dim/40">
-          <h2 className="font-medium">Manager tools</h2>
-          <p className="mt-1 text-xs text-muted">
-            Overrides are recorded in the event&apos;s history with your name against them.
-          </p>
-
-          {round && round.closedAt === null ? (
-            <div className="mt-4 space-y-4">
-              {round.pairings
-                .filter((p) => p.status !== "confirmed")
-                .map((p) => (
-                  <div key={p.id} className="rounded-lg border border-line bg-panel-2 p-3">
+        <details className="group">
+          <summary className="cursor-pointer list-none text-sm text-fg-faint transition-colors hover:text-fg">
+            <span className="inline-block transition-transform group-open:rotate-90">▸</span>{" "}
+            Manager tools
+          </summary>
+          <div className="mt-4 space-y-5">
+            {round && round.closedAt === null && open.length > 0 ? (
+              <div className="space-y-3">
+                {open.map((p) => (
+                  <Card key={p.id} tone="raised" className="p-3">
                     <p className="mb-2 text-sm">
-                      {name(users, p.a)} <span className="text-muted">vs</span> {name(users, p.b)}
+                      {nameOf(p.a)} <span className="text-fg-faint">vs</span> {nameOf(p.b)}
                       {p.status === "disputed" ? (
                         <span className="ml-2 text-loss">disputed</span>
                       ) : null}
@@ -404,11 +317,10 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
                       label="Set result"
                       compact
                     >
-                      <ManagerScoreSelect aName={name(users, p.a)} bName={name(users, p.b)} />
+                      <ManagerScoreSelect aName={nameOf(p.a)} bName={nameOf(p.b)} />
                     </ActionForm>
-                  </div>
+                  </Card>
                 ))}
-              {openCount > 0 ? (
                 <ActionForm
                   action={forceCloseRoundAction}
                   fields={{ eventId: event.id }}
@@ -417,42 +329,31 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
                   confirm="Close with unplayed matches?"
                   compact
                 />
-              ) : null}
+              </div>
+            ) : null}
+
+            <div>
+              <SectionHead>Drop a player</SectionHead>
+              <ul className="divide-y divide-hair-soft">
+                {event.players
+                  .filter((p) => p.droppedAfterRound === null)
+                  .map((p) => (
+                    <li key={p.userId} className="flex flex-wrap items-center gap-2 py-2">
+                      <span className="min-w-0 flex-1 truncate text-sm">{nameOf(p.userId)}</span>
+                      <ActionForm
+                        action={dropPlayerAction}
+                        fields={{ eventId: event.id, targetId: p.userId }}
+                        label="Drop"
+                        variant="ghost"
+                        confirm="Confirm drop"
+                        compact
+                      />
+                    </li>
+                  ))}
+              </ul>
             </div>
-          ) : null}
-
-          <div className="mt-5">
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted">
-              Drop a player
-            </h3>
-            <ul className="space-y-2">
-              {event.players
-                .filter((p) => p.droppedAfterRound === null)
-                .map((p) => (
-                  <li key={p.userId} className="flex flex-wrap items-center gap-2">
-                    <span className="min-w-0 flex-1 truncate text-sm">{name(users, p.userId)}</span>
-                    <ActionForm
-                      action={dropPlayerAction}
-                      fields={{ eventId: event.id, targetId: p.userId }}
-                      label="Drop"
-                      variant="ghost"
-                      confirm="Confirm drop"
-                      compact
-                    />
-                  </li>
-                ))}
-            </ul>
           </div>
-        </Panel>
-      ) : null}
-
-      {event.status === "complete" ? (
-        <Panel className="border-win/40 bg-win/5">
-          <p className="text-sm">
-            Event complete after {event.rounds.length} round{event.rounds.length === 1 ? "" : "s"}.
-            Results are saved to disk and will not change.
-          </p>
-        </Panel>
+        </details>
       ) : null}
     </div>
   );

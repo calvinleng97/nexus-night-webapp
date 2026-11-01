@@ -13,7 +13,7 @@ export function ScoreSelect({ name = "score" }: { name?: string }) {
       name={name}
       required
       defaultValue=""
-      className="mb-3 w-full rounded-lg border border-line bg-ink px-3 py-2 text-base outline-none focus:border-accent-dim"
+      className="mb-3 w-full rounded-xl border border-hair bg-base px-3.5 py-2.5 text-base outline-none focus:border-accent/50"
     >
       <option value="" disabled>
         Pick your result…
@@ -41,7 +41,7 @@ export function ManagerScoreSelect({ aName, bName }: { aName: string; bName: str
       name="score"
       required
       defaultValue=""
-      className="mb-2 w-full rounded-lg border border-line bg-ink px-2 py-1.5 text-sm outline-none focus:border-accent-dim"
+      className="mb-2 w-full rounded-xl border border-hair bg-base px-3 py-2 text-sm outline-none focus:border-accent/50"
     >
       <option value="" disabled>
         Set result…

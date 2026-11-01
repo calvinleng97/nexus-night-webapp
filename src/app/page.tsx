@@ -1,59 +1,23 @@
-import Link from "next/link";
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { Panel } from "@/components/ui";
+import { loadConfig } from "@/lib/config";
 import { signInAction } from "./auth-actions";
 
-export default async function HomePage() {
+/** No marketing page: signed in goes straight to the leagues list. */
+export default async function RootPage() {
   const session = await auth();
+  if (session?.user) redirect("/leagues");
+  const cfg = loadConfig();
 
   return (
-    <div className="space-y-6">
-      <section className="pt-6">
-        <h1 className="text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-          Run your Nexus Nights without the spreadsheet.
-        </h1>
-        <p className="mt-3 max-w-prose text-muted">
-          Swiss pairings over three rounds, byes handled properly, best-of-three results confirmed
-          by both players, and every game kept on disk for stats later.
-        </p>
-        <div className="mt-5">
-          {session?.user ? (
-            <Link
-              href="/leagues"
-              className="inline-flex rounded-lg border border-accent-dim bg-accent/15 px-4 py-2 font-medium text-accent"
-            >
-              Go to your leagues
-            </Link>
-          ) : (
-            <form action={signInAction}>
-              <button className="rounded-lg border border-accent-dim bg-accent/15 px-4 py-2 font-medium text-accent">
-                Sign in with Google to start
-              </button>
-            </form>
-          )}
-        </div>
-      </section>
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Panel>
-          <h2 className="font-medium">Leagues</h2>
-          <p className="mt-1 text-sm text-muted">
-            A standing group of players. Anyone signed in can join one and show up to its events.
-          </p>
-        </Panel>
-        <Panel>
-          <h2 className="font-medium">Events</h2>
-          <p className="mt-1 text-sm text-muted">
-            A single night. Players join, a manager starts it, and pairings generate themselves.
-          </p>
-        </Panel>
-        <Panel>
-          <h2 className="font-medium">Rounds</h2>
-          <p className="mt-1 text-sm text-muted">
-            Report your best-of-three, your opponent confirms, and the next round appears.
-          </p>
-        </Panel>
-      </div>
+    <div className="flex min-h-[60dvh] flex-col items-center justify-center text-center">
+      <div className="text-2xl text-accent">◆</div>
+      <h1 className="mt-3 text-xl font-semibold tracking-tight">{cfg.site.name}</h1>
+      <form action={signInAction} className="mt-7">
+        <button className="rounded-xl border border-accent/40 bg-accent/10 px-5 py-2.5 text-sm font-medium text-accent transition-colors hover:bg-accent/20">
+          Sign in with Google
+        </button>
+      </form>
     </div>
   );
 }

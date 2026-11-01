@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { requireUserId } from "@/lib/auth";
 import {
   confirmResult,
@@ -32,6 +33,8 @@ async function guard(fn: () => Promise<ActionState>): Promise<ActionState> {
   try {
     return await fn();
   } catch (e) {
+    // redirect() and notFound() signal by throwing; those must reach Next.js.
+    unstable_rethrow(e);
     return fail(e instanceof Error ? e.message : "Something went wrong.");
   }
 }
@@ -49,14 +52,9 @@ export async function createLeagueAction(_prev: ActionState, form: FormData): Pr
     const name = str(form, "name");
     if (name.length < 2) return fail("Give the league a name of at least 2 characters.");
     if (name.length > 80) return fail("League names are capped at 80 characters.");
-    const league = await createLeague({
-      name,
-      description: str(form, "description").slice(0, 500),
-      createdBy: userId,
-    });
+    const league = await createLeague({ name, createdBy: userId });
     revalidatePath("/leagues");
-    revalidatePath(`/leagues/${league.id}`);
-    return { ok: true, message: `Created ${league.name}.` };
+    redirect(`/leagues/${league.id}`);
   });
 }
 
@@ -106,8 +104,7 @@ export async function createEventAction(_prev: ActionState, form: FormData): Pro
       return fail("Rounds must be a whole number between 1 and 12.");
     const event = await createEvent({ leagueId, name, createdBy: userId, totalRounds });
     revalidatePath(`/leagues/${leagueId}`);
-    revalidatePath(`/events/${event.id}`);
-    return { ok: true, message: `Created ${event.name}.` };
+    redirect(`/events/${event.id}`);
   });
 }
 

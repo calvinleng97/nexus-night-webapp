@@ -33,12 +33,12 @@ export function ActionForm({
   const [armed, setArmed] = useState(false);
 
   const base =
-    "inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition disabled:opacity-50";
+    "inline-flex items-center justify-center gap-2 rounded-xl border px-3.5 py-2 text-sm font-medium transition-colors disabled:opacity-50";
   const variants = {
-    default: "border-line bg-panel-2 hover:border-accent-dim",
-    primary: "border-accent-dim bg-accent/15 text-accent hover:bg-accent/25",
-    danger: "border-loss/50 bg-loss/10 text-loss hover:bg-loss/20",
-    ghost: "border-transparent text-muted hover:text-white",
+    default: "border-hair bg-raised text-fg hover:border-accent/40",
+    primary: "border-accent/40 bg-accent/10 text-accent hover:bg-accent/20",
+    danger: "border-loss/40 bg-loss/10 text-loss hover:bg-loss/20",
+    ghost: "border-transparent text-fg-faint hover:text-fg",
   } as const;
 
   return (
@@ -59,7 +59,7 @@ export function ActionForm({
         <button
           type="button"
           onClick={() => setArmed(false)}
-          className="ml-2 text-xs text-muted underline"
+          className="ml-2 text-xs text-fg-faint underline"
         >
           cancel
         </button>

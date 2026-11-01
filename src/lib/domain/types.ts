@@ -20,7 +20,6 @@ export interface User {
 export interface League {
   id: LeagueId;
   name: string;
-  description: string;
   createdBy: UserId;
   /** Managers can create events. The creator is always a manager. */
   managerIds: UserId[];

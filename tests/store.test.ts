@@ -48,7 +48,6 @@ describe("file store round-trip", () => {
     const owner = await makeUser("sub-owner", "Owner");
     const league = await repo.createLeague({
       name: "Thursday Nexus",
-      description: "weekly",
       createdBy: owner.id,
     });
     const loaded = await repo.getLeague(league.id);
@@ -60,7 +59,7 @@ describe("file store round-trip", () => {
   it("refuses event creation by a non-manager", async () => {
     const owner = await makeUser("sub-o2", "Owner2");
     const outsider = await makeUser("sub-out", "Outsider");
-    const league = await repo.createLeague({ name: "L", description: "", createdBy: owner.id });
+    const league = await repo.createLeague({ name: "L", createdBy: owner.id });
     await expect(
       repo.createEvent({ leagueId: league.id, name: "E", createdBy: outsider.id }),
     ).rejects.toThrow(/league manager/i);
@@ -68,7 +67,7 @@ describe("file store round-trip", () => {
 
   it("runs a whole event through the store and logs every result", async () => {
     const owner = await makeUser("sub-mgr", "Manager");
-    const league = await repo.createLeague({ name: "Run", description: "", createdBy: owner.id });
+    const league = await repo.createLeague({ name: "Run", createdBy: owner.id });
     const players = await Promise.all(
       [0, 1, 2, 3, 4].map((i) => makeUser(`sub-p${i}`, `Player ${i}`)),
     );
@@ -127,7 +126,7 @@ describe("file store round-trip", () => {
 
   it("serialises concurrent writes to the same event", async () => {
     const owner = await makeUser("sub-conc", "Conc");
-    const league = await repo.createLeague({ name: "C", description: "", createdBy: owner.id });
+    const league = await repo.createLeague({ name: "C", createdBy: owner.id });
     const event = await repo.createEvent({ leagueId: league.id, name: "C1", createdBy: owner.id });
     const players = await Promise.all([0, 1, 2, 3].map((i) => makeUser(`sub-c${i}`, `C${i}`)));
 
