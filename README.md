@@ -262,9 +262,24 @@ sudo systemctl enable --now nexus-deploy.timer
 systemctl list-timers nexus-deploy.timer
 ```
 
-The box needs read access to the repo: add
-`/srv/nexus-night/.ssh/id_ed25519.pub` as a **read-only deploy key** under the
-repository's Settings → Deploy keys.
+The box needs read access to the repo. Two things, both one-off:
+
+```bash
+# 1. Pin GitHub's published host keys, so the first fetch does not fail with
+#    "Host key verification failed" and does not trust-on-first-use either.
+curl -s https://api.github.com/meta \
+  | python3 -c 'import json,sys; [print("github.com "+k) for k in json.load(sys.stdin)["ssh_keys"]]' \
+  | sudo tee /srv/nexus-night/.ssh/known_hosts >/dev/null
+sudo chown nexus:nexus /srv/nexus-night/.ssh/known_hosts
+
+# 2. Show the key to add on GitHub.
+sudo cat /srv/nexus-night/.ssh/id_ed25519.pub
+```
+
+Add that public key as a **read-only deploy key** under the repository's
+Settings → Deploy keys. Until it exists the timer fails every minute with
+`Permission denied (publickey)`, which is visible in
+`journalctl -u nexus-deploy`.
 
 ### Push-based (GitHub Actions)
 
