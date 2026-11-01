@@ -89,13 +89,9 @@ export function Bracket({
                       <div className="h-px bg-hair-soft" />
                       {row(p.b, score?.b ?? null, bWon)}
                     </div>
-                    {p.kind === "forfeit" || p.rematch || p.status === "disputed" ? (
+                    {p.status === "disputed" || p.kind === "forfeit" ? (
                       <p className="mt-1.5 text-[0.7rem] text-fg-faint">
-                        {p.status === "disputed"
-                          ? "disputed"
-                          : p.kind === "forfeit"
-                            ? "forfeit"
-                            : "rematch"}
+                        {p.status === "disputed" ? "disputed" : "forfeit"}
                       </p>
                     ) : null}
                   </li>

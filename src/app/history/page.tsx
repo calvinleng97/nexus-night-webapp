@@ -4,14 +4,14 @@ import { currentUserId } from "@/lib/auth";
 import { matchHistory, recordString, summarize } from "@/lib/domain/history";
 import type { UserId } from "@/lib/domain/types";
 import { getUsers, listEventsForUser } from "@/lib/store/repo";
-import { Badge, Card, CountPill, Empty, PageTitle, Score, SectionHead, Tag } from "@/components/ui";
+import { Badge, Card, Empty, PageTitle, Score, SectionHead, Tag } from "@/components/ui";
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="px-4 py-3">
+    <Card className="px-4 py-3">
       <div className="font-mono text-lg tabular-nums leading-none">{value}</div>
       <div className="mt-1 text-[0.7rem] uppercase tracking-wide text-fg-faint">{label}</div>
-    </div>
+    </Card>
   );
 }
 
@@ -62,32 +62,16 @@ export default async function HistoryPage() {
     <div>
       <PageTitle>History</PageTitle>
 
-      <Card className="mb-9 overflow-hidden">
-        <div className="grid grid-cols-2 divide-x divide-y divide-hair-soft sm:grid-cols-4 sm:divide-y-0">
-          <Stat label="Match record" value={recordString(totals)} />
-          <Stat label="Games" value={`${totals.gamesWon}–${totals.gamesLost}`} />
-          <Stat
-            label="Win rate"
-            value={
-              totals.matches > 0 ? `${Math.round((totals.wins / totals.matches) * 100)}%` : "—"
-            }
-          />
-          <Stat label="Events" value={String(totals.events)} />
-        </div>
-        <div className="flex flex-wrap gap-2 border-t border-hair-soft px-4 py-3">
-          <CountPill
-            value={totals.matches}
-            label={totals.matches === 1 ? "match" : "matches"}
-          />
-          <CountPill
-            value={totals.opponents}
-            label={totals.opponents === 1 ? "opponent" : "opponents"}
-          />
-          {totals.byes > 0 ? (
-            <CountPill value={totals.byes} label={totals.byes === 1 ? "bye" : "byes"} />
-          ) : null}
-        </div>
-      </Card>
+      <div className="mb-9 grid grid-cols-2 gap-2 sm:grid-cols-5">
+        <Stat label="Match record" value={recordString(totals)} />
+        <Stat label="Games" value={`${totals.gamesWon}–${totals.gamesLost}`} />
+        <Stat
+          label="Win rate"
+          value={totals.matches > 0 ? `${Math.round((totals.wins / totals.matches) * 100)}%` : "—"}
+        />
+        <Stat label="Matches" value={String(totals.matches)} />
+        <Stat label="Events" value={String(totals.events)} />
+      </div>
 
       {byEvent.map((group) => {
         const played = group.rows.filter((r) => r.result !== "pending" && r.result !== "bye");
