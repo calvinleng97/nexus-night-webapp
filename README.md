@@ -146,6 +146,21 @@ dig +short nexusnight.duckdns.org    # should print your server's IP
 
 ### 2. Google OAuth client
 
+Publishing the consent screen (so friends do not need to be on a test-user
+list) asks for a logo and three links. `public/logo-120.png` is the logo, and
+the app serves the pages:
+
+```
+Application home page          https://YOUR-HOST/
+Application privacy policy     https://YOUR-HOST/privacy
+Application terms of service   https://YOUR-HOST/terms
+Authorized domain              YOUR-HOST
+```
+
+Set `site.contactEmail` in the config first if you want your address on those
+pages; left blank they tell readers to contact whoever invited them.
+
+
 In [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials),
 create an **OAuth client ID** of type **Web application** with these authorized
 redirect URIs:
@@ -272,6 +287,7 @@ formatted and diffs cleanly.
 | `dataDir` | `./data` | Directory used as the database |
 | `site.name` | `Nexus Night` | Shown in the header |
 | `site.url` | `http://localhost:3000` | Public origin; must match the OAuth redirect origin |
+| `site.contactEmail` | `""` | Shown on /privacy and /terms; blank tells readers to ask whoever invited them |
 | `event.defaultRounds` | `3` | Swiss rounds for new events |
 | `pairing.priority` | `record` | `record` = pair strictly within records, replaying a pairing if needed. `avoid-rematch` = never repeat a pairing, mismatching records instead |
 | `elo.base` | `1200` | Rating every player starts from |

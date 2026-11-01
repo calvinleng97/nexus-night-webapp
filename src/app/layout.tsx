@@ -64,7 +64,18 @@ export default async function RootLayout(props: LayoutProps<"/">) {
             ) : null}
           </div>
         </header>
-        <main className="mx-auto max-w-3xl px-4 py-7 pb-24 sm:px-6">{props.children}</main>
+        <main className="mx-auto max-w-3xl px-4 py-7 sm:px-6">{props.children}</main>
+        <footer className="mx-auto max-w-3xl px-4 pb-10 pt-4 sm:px-6">
+          <div className="flex items-center gap-4 border-t border-hair-soft pt-5 text-xs text-fg-faint">
+            <span>{cfg.site.name}</span>
+            <Link href="/privacy" className="ml-auto transition-colors hover:text-fg-dim">
+              Privacy
+            </Link>
+            <Link href="/terms" className="transition-colors hover:text-fg-dim">
+              Terms
+            </Link>
+          </div>
+        </footer>
       </body>
     </html>
   );

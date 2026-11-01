@@ -12,6 +12,12 @@ export interface NexusConfig {
     name: string;
     /** Public base URL. Must match the Google OAuth redirect URI's origin. */
     url: string;
+    /**
+     * Shown on the privacy and terms pages so people have somewhere to write
+     * about their data. Left blank, those pages tell readers to contact
+     * whoever invited them instead.
+     */
+    contactEmail: string;
   };
   event: {
     /** Swiss rounds per event. Nexus Night standard is 3. */
@@ -42,7 +48,7 @@ export interface NexusConfig {
 
 const DEFAULTS: NexusConfig = {
   dataDir: "./data",
-  site: { name: "Nexus Night", url: "http://localhost:3000" },
+  site: { name: "Nexus Night", url: "http://localhost:3000", contactEmail: "" },
   event: { defaultRounds: 3 },
   pairing: { priority: "record" },
   elo: { base: 1200, k: 24, provisionalK: 40, provisionalGames: 10 },
@@ -58,6 +64,8 @@ function merge(base: NexusConfig, patch: Record<string, unknown>): NexusConfig {
   if (isRecord(patch.site)) {
     if (typeof patch.site.name === "string") out.site.name = patch.site.name;
     if (typeof patch.site.url === "string") out.site.url = patch.site.url;
+    if (typeof patch.site.contactEmail === "string")
+      out.site.contactEmail = patch.site.contactEmail;
   }
   if (isRecord(patch.event) && typeof patch.event.defaultRounds === "number")
     out.event.defaultRounds = patch.event.defaultRounds;

@@ -2,7 +2,8 @@
   "dataDir": "/srv/nexus-night/data",
   "site": {
     "name": "Nexus Night",
-    "url": "https://nexusnight.duckdns.org"
+    "url": "https://nexusnight.duckdns.org",
+    "contactEmail": ""
   },
   "event": {
     "defaultRounds": 3
