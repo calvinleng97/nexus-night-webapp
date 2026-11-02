@@ -17,7 +17,6 @@ import {
   Empty,
   SectionHead,
   Stat,
-  Tag,
 } from "@/components/ui";
 
 function record(d: Pick<PlayedDeck, "wins" | "losses" | "draws">): string {
@@ -48,7 +47,6 @@ export default async function LeagueDecksPage(props: PageProps<"/leagues/[id]/de
   const legends = legendUsage(history);
 
   const withDecks = history.filter((h) => h.decks.length > 0);
-  const withoutDecks = history.filter((h) => h.decks.length === 0);
   const nameOf = (uid: string) => users.get(uid)?.name ?? "Unknown";
 
   return (
@@ -162,18 +160,6 @@ export default async function LeagueDecksPage(props: PageProps<"/leagues/[id]/de
         </>
       )}
 
-      {withoutDecks.length > 0 ? (
-        <div className="mt-9 border-t border-hair-soft pt-6">
-          <SectionHead count={withoutDecks.length}>Nothing registered</SectionHead>
-          <ul className="flex flex-wrap gap-2">
-            {withoutDecks.map((p) => (
-              <li key={p.userId}>
-                <Tag tone={p.userId === userId ? "accent" : "plain"}>{nameOf(p.userId)}</Tag>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
     </div>
   );
 }
