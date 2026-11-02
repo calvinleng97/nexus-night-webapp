@@ -6,9 +6,9 @@
  * which is a question about the past, so deleting a deck does not erase it
  * from the league's record.
  *
- * Draft events are excluded on purpose. A deck registered for an event that
- * has not started has not been played yet, and showing it would let anyone
- * scout the field before pairings exist.
+ * Draft events are excluded on purpose: a deck registered for an event that
+ * has not started has not been played yet, so it has no record here. (It is
+ * still visible on that event's Players tab.)
  */
 
 import { computeStandings } from "./standings";
