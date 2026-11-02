@@ -60,3 +60,23 @@ export function formatDay(value: string | null): string | null {
     timeZone: "UTC",
   }).format(dt);
 }
+
+/**
+ * The pieces of an event date, for a calendar-style tile: "Tue", "3", "Nov",
+ * "19:00". Read in UTC for the same reason as `formatEventDate`.
+ */
+export function eventDateParts(
+  value: string | null,
+): { weekday: string; day: string; month: string; time: string } | null {
+  if (!value || !isValidEventDate(value)) return null;
+  const [, y, mo, d, h, mi] = SHAPE.exec(value)!;
+  const dt = new Date(Date.UTC(Number(y), Number(mo) - 1, Number(d)));
+  const fmt = (opts: Intl.DateTimeFormatOptions) =>
+    new Intl.DateTimeFormat("en-GB", { ...opts, timeZone: "UTC" }).format(dt);
+  return {
+    weekday: fmt({ weekday: "short" }),
+    day: String(Number(d)),
+    month: fmt({ month: "short" }),
+    time: `${h}:${mi}`,
+  };
+}

@@ -11,12 +11,10 @@ import { formatDay } from "@/lib/domain/schedule";
 import { getLeague, getUsers, listEventsForLeague } from "@/lib/store/repo";
 import { DeckChips, DeckDisclosure } from "@/components/deck-view";
 import {
-  BackLink,
   Badge,
   Card,
   CountPill,
   Empty,
-  PageTitle,
   SectionHead,
   Stat,
   Tag,
@@ -27,7 +25,7 @@ function record(d: Pick<PlayedDeck, "wins" | "losses" | "draws">): string {
 }
 
 /**
- * Every deck played in this league, by player.
+ * The Decks tab: every deck played in this league, by player.
  *
  * Members only, like the league page itself: the join code is what gates a
  * league, so anyone who is not in it gets sent back to the door.
@@ -55,16 +53,8 @@ export default async function LeagueDecksPage(props: PageProps<"/leagues/[id]/de
 
   return (
     <div>
-      <BackLink href={`/leagues/${league.id}`}>{league.name}</BackLink>
-      <div className="mt-3">
-        <PageTitle>Decks played</PageTitle>
-      </div>
-
       {totals.decks === 0 ? (
-        <Empty>
-          No decks played yet. Lists appear here once an event has started with someone&apos;s deck
-          registered on it.
-        </Empty>
+        <Empty>No decks played yet.</Empty>
       ) : (
         <>
           <div className="mb-9 grid grid-cols-2 gap-2 sm:grid-cols-4">

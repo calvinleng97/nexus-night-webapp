@@ -77,7 +77,7 @@ export async function joinLeagueAction(_prev: ActionState, form: FormData): Prom
     if (!code) return fail("Enter the league's join code.");
     await joinLeague(leagueId, userId, code);
     revalidatePath("/leagues");
-    revalidatePath(`/leagues/${leagueId}`);
+    revalidatePath(`/leagues/${leagueId}`, "layout");
     return { ok: true };
   });
 }
@@ -104,7 +104,7 @@ export async function rotateJoinCodeAction(
     const userId = await requireUserId();
     const leagueId = str(form, "leagueId");
     await rotateJoinCode(leagueId, userId);
-    revalidatePath(`/leagues/${leagueId}`);
+    revalidatePath(`/leagues/${leagueId}`, "layout");
     return { ok: true, warnings: ["The old code no longer works."] };
   });
 }
@@ -115,7 +115,7 @@ export async function leaveLeagueAction(_prev: ActionState, form: FormData): Pro
     const leagueId = str(form, "leagueId");
     await leaveLeague(leagueId, userId);
     revalidatePath("/leagues");
-    revalidatePath(`/leagues/${leagueId}`);
+    revalidatePath(`/leagues/${leagueId}`, "layout");
     return { ok: true };
   });
 }
@@ -125,7 +125,7 @@ export async function setManagerAction(_prev: ActionState, form: FormData): Prom
     const userId = await requireUserId();
     const leagueId = str(form, "leagueId");
     await setLeagueManager(leagueId, userId, str(form, "targetId"), str(form, "make") === "1");
-    revalidatePath(`/leagues/${leagueId}`);
+    revalidatePath(`/leagues/${leagueId}`, "layout");
     return { ok: true };
   });
 }
@@ -136,7 +136,7 @@ export async function removeMemberAction(_prev: ActionState, form: FormData): Pr
     const leagueId = str(form, "leagueId");
     const { warnings } = await removeLeagueMember(leagueId, userId, str(form, "targetId"));
     revalidatePath("/leagues");
-    revalidatePath(`/leagues/${leagueId}`);
+    revalidatePath(`/leagues/${leagueId}`, "layout");
     return { ok: true, warnings };
   });
 }
@@ -195,7 +195,7 @@ export async function registerDeckAction(_prev: ActionState, form: FormData): Pr
         warnings: res.value.warnings,
       };
     });
-    revalidatePath(`/events/${eventId}`);
+    revalidatePath(`/events/${eventId}`, "layout");
     return { ok: true, warnings };
   });
 }
@@ -222,7 +222,7 @@ export async function createEventAction(_prev: ActionState, form: FormData): Pro
       totalRounds,
       scheduledFor,
     });
-    revalidatePath(`/leagues/${leagueId}`);
+    revalidatePath(`/leagues/${leagueId}`, "layout");
     redirect(`/events/${event.id}`);
   });
 }
@@ -232,7 +232,7 @@ export async function joinEventAction(_prev: ActionState, form: FormData): Promi
     const userId = await requireUserId();
     const eventId = str(form, "eventId");
     await joinEvent(eventId, userId);
-    revalidatePath(`/events/${eventId}`);
+    revalidatePath(`/events/${eventId}`, "layout");
     return { ok: true };
   });
 }
@@ -242,7 +242,7 @@ export async function leaveEventAction(_prev: ActionState, form: FormData): Prom
     const userId = await requireUserId();
     const eventId = str(form, "eventId");
     await leaveEvent(eventId, userId);
-    revalidatePath(`/events/${eventId}`);
+    revalidatePath(`/events/${eventId}`, "layout");
     return { ok: true };
   });
 }
@@ -267,7 +267,7 @@ export async function setEventDateAction(
         warnings: res.value.warnings,
       };
     });
-    revalidatePath(`/events/${eventId}`);
+    revalidatePath(`/events/${eventId}`, "layout");
     revalidatePath("/leagues");
     return { ok: true, warnings };
   });
@@ -286,7 +286,7 @@ export async function startEventAction(_prev: ActionState, form: FormData): Prom
         warnings: res.value.warnings,
       };
     });
-    revalidatePath(`/events/${eventId}`);
+    revalidatePath(`/events/${eventId}`, "layout");
     return { ok: true, warnings };
   });
 }
@@ -311,7 +311,7 @@ export async function submitScoreAction(_prev: ActionState, form: FormData): Pro
         warnings: res.value.warnings,
       };
     });
-    revalidatePath(`/events/${eventId}`);
+    revalidatePath(`/events/${eventId}`, "layout");
     return { ok: true, warnings };
   });
 }
@@ -330,7 +330,7 @@ export async function confirmScoreAction(_prev: ActionState, form: FormData): Pr
         warnings: res.value.warnings,
       };
     });
-    revalidatePath(`/events/${eventId}`);
+    revalidatePath(`/events/${eventId}`, "layout");
     return { ok: true, warnings };
   });
 }
@@ -349,7 +349,7 @@ export async function disputeScoreAction(_prev: ActionState, form: FormData): Pr
         warnings: res.value.warnings,
       };
     });
-    revalidatePath(`/events/${eventId}`);
+    revalidatePath(`/events/${eventId}`, "layout");
     return { ok: true, warnings };
   });
 }
@@ -368,7 +368,7 @@ export async function dropPlayerAction(_prev: ActionState, form: FormData): Prom
         warnings: res.value.warnings,
       };
     });
-    revalidatePath(`/events/${eventId}`);
+    revalidatePath(`/events/${eventId}`, "layout");
     return { ok: true, warnings };
   });
 }
@@ -386,7 +386,7 @@ export async function forceCloseRoundAction(_prev: ActionState, form: FormData):
         warnings: res.value.warnings,
       };
     });
-    revalidatePath(`/events/${eventId}`);
+    revalidatePath(`/events/${eventId}`, "layout");
     return { ok: true, warnings };
   });
 }
