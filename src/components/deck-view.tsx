@@ -1,6 +1,6 @@
 import { cardTotal, deckSections, hasCardList } from "@/lib/domain/deck";
 import type { DeckCard } from "@/lib/domain/types";
-import { CountPill, MicroLabel } from "./ui";
+import { MicroLabel } from "./ui";
 
 /**
  * Anything with the five card sections: a saved Deck or the snapshot an event
@@ -14,24 +14,6 @@ export interface DeckLike {
   battlefields: DeckCard[];
   runes: DeckCard[];
   sideboard: DeckCard[];
-}
-
-/** The shape of a deck as chips: how big each section is, at a glance. */
-export function DeckChips({ deck }: { deck: DeckLike }) {
-  const sections = deckSections(deck);
-  if (sections.length === 0) return null;
-  return (
-    <div className="flex flex-wrap gap-2">
-      {sections.map((s) => (
-        <CountPill
-          key={s.key}
-          value={cardTotal(s.cards)}
-          label={s.key === "mainDeck" ? "main" : s.key === "sideboard" ? "side" : s.label}
-          tone={s.key === "mainDeck" ? "accent" : "plain"}
-        />
-      ))}
-    </div>
-  );
 }
 
 function Section({ label, cards }: { label: string; cards: DeckCard[] }) {

@@ -9,7 +9,7 @@ import {
 } from "@/lib/domain/league-decks";
 import { formatDay } from "@/lib/domain/schedule";
 import { getLeague, getUsers, listEventsForLeague } from "@/lib/store/repo";
-import { DeckChips, DeckDisclosure } from "@/components/deck-view";
+import { DeckDisclosure } from "@/components/deck-view";
 import {
   Badge,
   Card,
@@ -124,10 +124,6 @@ export default async function LeagueDecksPage(props: PageProps<"/leagues/[id]/de
                       <span className="ml-auto font-mono text-sm tabular-nums text-fg-dim">
                         {record(deck)}
                       </span>
-                    </div>
-
-                    <div className="mt-3">
-                      <DeckChips deck={deck.snapshot} />
                     </div>
 
                     <ul className="mt-3 divide-y divide-hair-soft border-t border-hair-soft">
