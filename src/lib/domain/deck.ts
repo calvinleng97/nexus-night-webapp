@@ -153,3 +153,106 @@ export function shortLegend(legend: string | null): string | null {
   const comma = legend.indexOf(",");
   return comma > 0 ? legend.slice(0, comma).trim() : legend;
 }
+
+// ------------------------------------------------- snapshots and sections
+
+/**
+ * The five card sections of a deck, in the order they are shown.
+ *
+ * Tolerant of a missing array so a record written by an older schema can be
+ * read without special-casing at every call site.
+ */
+export interface DeckSection {
+  key: "champions" | "mainDeck" | "battlefields" | "runes" | "sideboard";
+  /** How the section is titled in the UI. */
+  label: string;
+  /** How the section is spelled in the plain-text format. */
+  header: string;
+  cards: DeckCard[];
+}
+
+interface DeckLike {
+  legend?: string | null;
+  champions?: DeckCard[];
+  mainDeck?: DeckCard[];
+  battlefields?: DeckCard[];
+  runes?: DeckCard[];
+  sideboard?: DeckCard[];
+}
+
+export function deckSections(deck: DeckLike): DeckSection[] {
+  const all: DeckSection[] = [
+    { key: "champions", label: "Champions", header: "Champion", cards: deck.champions ?? [] },
+    { key: "mainDeck", label: "Main deck", header: "MainDeck", cards: deck.mainDeck ?? [] },
+    {
+      key: "battlefields",
+      label: "Battlefields",
+      header: "Battlefields",
+      cards: deck.battlefields ?? [],
+    },
+    { key: "runes", label: "Runes", header: "Runes", cards: deck.runes ?? [] },
+    { key: "sideboard", label: "Sideboard", header: "Sideboard", cards: deck.sideboard ?? [] },
+  ];
+  return all.filter((s) => s.cards.length > 0);
+}
+
+/** False when a record names a deck but has no cards — see RegisteredDeck.source. */
+export function hasCardList(deck: DeckLike): boolean {
+  return deckSections(deck).length > 0;
+}
+
+/**
+ * Freeze a saved deck into the form an event stores.
+ *
+ * The cards are copied, not referenced: editing or deleting the deck later
+ * must not change what the event says was played.
+ */
+export function snapshotDeck(
+  deck: {
+    id: string;
+    name: string;
+    legend: string | null;
+    champions: DeckCard[];
+    mainDeck: DeckCard[];
+    battlefields: DeckCard[];
+    runes: DeckCard[];
+    sideboard: DeckCard[];
+    source: string;
+  },
+  now: string = new Date().toISOString(),
+): {
+  deckId: string;
+  name: string;
+  legend: string | null;
+  champions: DeckCard[];
+  mainDeck: DeckCard[];
+  battlefields: DeckCard[];
+  runes: DeckCard[];
+  sideboard: DeckCard[];
+  source: string;
+  registeredAt: string;
+} {
+  return {
+    deckId: deck.id,
+    name: deck.name,
+    legend: deck.legend,
+    champions: deck.champions.map((c) => ({ ...c })),
+    mainDeck: deck.mainDeck.map((c) => ({ ...c })),
+    battlefields: deck.battlefields.map((c) => ({ ...c })),
+    runes: deck.runes.map((c) => ({ ...c })),
+    sideboard: deck.sideboard.map((c) => ({ ...c })),
+    source: deck.source,
+    registeredAt: now,
+  };
+}
+
+/** Render a deck back out as plain text, so a list can be copied elsewhere. */
+export function decklistText(deck: DeckLike): string {
+  const parts: string[] = [];
+  if (deck.legend) parts.push(`Legend:\n1 ${deck.legend}`);
+  for (const section of deckSections(deck))
+    parts.push(
+      `${section.header}:\n${section.cards.map((c) => `${c.count} ${c.name}`).join("\n")}`,
+    );
+  return parts.join("\n\n");
+}

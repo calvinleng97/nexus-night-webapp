@@ -2,8 +2,16 @@ import { loadConfig } from "../config";
 import { newId, newJoinCode, newSeed, normalizeJoinCode, userIdFromGoogleSub } from "../ids";
 import { emptyEvent } from "../domain/event-machine";
 import { eventOrderKey } from "../domain/schedule";
-import type { Deck, DeckId, League, NexusEvent, User, UserId } from "../domain/types";
-import { parseDecklist, suggestDeckName } from "../domain/deck";
+import type {
+  Deck,
+  DeckId,
+  League,
+  NexusEvent,
+  RegisteredDeck,
+  User,
+  UserId,
+} from "../domain/types";
+import { parseDecklist, snapshotDeck, suggestDeckName } from "../domain/deck";
 import {
   appendJsonl,
   ensureDir,
@@ -82,6 +90,39 @@ async function migrate(from: number): Promise<void> {
       const event = await readJson<NexusEvent>(file);
       if (!event || event.scheduledFor !== undefined) continue;
       await writeJsonAtomic(file, { ...event, scheduledFor: null });
+    }
+  }
+  if (from < 5) {
+    // v5 widened RegisteredDeck from {name, legend} to the whole list, so an
+    // event can show the decks that were played in it. Backfill the cards
+    // from the saved deck where it still exists; where the owner has already
+    // deleted it, the cards are simply gone and the record keeps the name.
+    const files = await listJsonFiles(paths.eventsDir());
+    for (const file of files) {
+      const event = await readJson<NexusEvent>(file);
+      if (!event) continue;
+      const stale = event.players.filter((p) => p.deck && p.deck.source === undefined);
+      if (stale.length === 0) continue;
+
+      const players = await Promise.all(
+        event.players.map(async (p) => {
+          if (!p.deck || p.deck.source !== undefined) return p;
+          const saved = await readJson<Deck>(paths.deck(p.deck.deckId));
+          const filled: RegisteredDeck = saved
+            ? { ...snapshotDeck(saved, p.deck.registeredAt), name: p.deck.name, legend: p.deck.legend }
+            : {
+                ...p.deck,
+                champions: [],
+                mainDeck: [],
+                battlefields: [],
+                runes: [],
+                sideboard: [],
+                source: "",
+              };
+          return { ...p, deck: filled };
+        }),
+      );
+      await writeJsonAtomic(file, { ...event, players });
     }
   }
   await writeJsonAtomic(paths.meta(), {

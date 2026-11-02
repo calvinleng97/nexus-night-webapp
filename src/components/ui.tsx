@@ -209,3 +209,16 @@ export function MicroLabel({ children }: { children: ReactNode }) {
     </p>
   );
 }
+
+/**
+ * One figure as a tile. Used in rows, so every headline number on a page
+ * reads the same way.
+ */
+export function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <Card className="px-4 py-3">
+      <div className="font-mono text-lg leading-none tabular-nums">{value}</div>
+      <div className="mt-1 text-[0.7rem] uppercase tracking-wide text-fg-faint">{label}</div>
+    </Card>
+  );
+}

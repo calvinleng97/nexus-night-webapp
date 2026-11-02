@@ -55,14 +55,28 @@ export interface DeckCard {
 /**
  * What a player registered for one event.
  *
- * The name and legend are snapshotted rather than looked up through deckId:
+ * The whole list is snapshotted rather than looked up through deckId:
  * deleting or editing a deck afterwards must not rewrite what the records say
- * someone played on the night.
+ * someone played on the night. deckId is kept only so repeat appearances of
+ * the same list can be grouped together.
  */
 export interface RegisteredDeck {
   deckId: DeckId;
   name: string;
   legend: string | null;
+  champions: DeckCard[];
+  mainDeck: DeckCard[];
+  battlefields: DeckCard[];
+  runes: DeckCard[];
+  sideboard: DeckCard[];
+  /**
+   * Exactly what was pasted when it was registered.
+   *
+   * Empty for a registration made before the cards were snapshotted, whose
+   * source deck had already been deleted by the time the data was migrated —
+   * the only case where a past event knows the deck's name but not its cards.
+   */
+  source: string;
   registeredAt: string;
 }
 

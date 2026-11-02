@@ -1,19 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUserId } from "@/lib/auth";
-import { cardTotal } from "@/lib/domain/deck";
 import { listDecksForUser } from "@/lib/store/repo";
 import { ActionForm } from "@/components/action-form";
-import {
-  Badge,
-  Card,
-  CountPill,
-  Empty,
-  Field,
-  PageTitle,
-  SectionHead,
-  inputClass,
-} from "@/components/ui";
+import { DeckChips, DeckDisclosure } from "@/components/deck-view";
+import { Card, Empty, Field, PageTitle, SectionHead, inputClass } from "@/components/ui";
 import { addDeckAction, deleteDeckAction } from "../actions";
 
 const PLACEHOLDER = `Legend:
@@ -123,30 +114,12 @@ export default async function DecksPage(props: PageProps<"/decks">) {
                   compact
                 />
               </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <CountPill value={cardTotal(d.mainDeck)} label="main" tone="accent" />
-                {cardTotal(d.runes) > 0 ? (
-                  <CountPill value={cardTotal(d.runes)} label="runes" />
-                ) : null}
-                {cardTotal(d.battlefields) > 0 ? (
-                  <CountPill value={cardTotal(d.battlefields)} label="battlefields" />
-                ) : null}
-                {cardTotal(d.champions) > 0 ? (
-                  <CountPill value={cardTotal(d.champions)} label="champions" />
-                ) : null}
-                {cardTotal(d.sideboard) > 0 ? (
-                  <CountPill value={cardTotal(d.sideboard)} label="side" />
-                ) : null}
+              <div className="mt-3">
+                <DeckChips deck={d} />
               </div>
-              <details className="group mt-3">
-                <summary className="cursor-pointer list-none text-xs text-fg-faint transition-colors hover:text-fg">
-                  <span className="inline-block transition-transform group-open:rotate-90">▸</span>{" "}
-                  Full list
-                </summary>
-                <pre className="scroll-x mt-2 rounded-xl border border-hair-soft bg-ink p-3 font-mono text-[0.75rem] leading-relaxed text-fg-dim">
-                  {d.source.trim()}
-                </pre>
-              </details>
+              <div className="mt-3">
+                <DeckDisclosure deck={d} label="Full list" />
+              </div>
             </Card>
           ))}
         </ul>

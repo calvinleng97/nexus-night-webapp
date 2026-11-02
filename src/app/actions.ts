@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { requireUserId } from "@/lib/auth";
+import { snapshotDeck } from "@/lib/domain/deck";
 import { isValidEventDate } from "@/lib/domain/schedule";
 import {
   confirmResult,
@@ -180,12 +181,9 @@ export async function registerDeckAction(_prev: ActionState, form: FormData): Pr
       const deck = await getDeck(deckId);
       if (!deck) return fail("That deck no longer exists.");
       if (deck.ownerId !== targetId) return fail("That deck belongs to someone else.");
-      registered = {
-        deckId: deck.id,
-        name: deck.name,
-        legend: deck.legend,
-        registeredAt: new Date().toISOString(),
-      };
+      // The whole list is copied onto the event, so the night's record cannot
+      // be rewritten by editing or deleting the deck afterwards.
+      registered = snapshotDeck(deck);
     }
 
     const { warnings } = await mutateEvent(eventId, userId, (event) => {

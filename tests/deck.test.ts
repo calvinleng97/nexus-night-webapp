@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { cardTotal, parseDecklist, shortLegend, suggestDeckName } from "@/lib/domain/deck";
+import {
+  cardTotal,
+  deckSections,
+  decklistText,
+  hasCardList,
+  parseDecklist,
+  shortLegend,
+  snapshotDeck,
+  suggestDeckName,
+} from "@/lib/domain/deck";
 
 const SAMPLE = `Legend:
 1 Riven, The Exile
@@ -179,5 +188,53 @@ describe("naming helpers", () => {
     expect(shortLegend("Riven, The Exile")).toBe("Riven");
     expect(shortLegend("Jinx")).toBe("Jinx");
     expect(shortLegend(null)).toBeNull();
+  });
+});
+
+describe("snapshots", () => {
+  const saved = { id: "dk_1", name: "Riven list", ...ok(SAMPLE), source: SAMPLE };
+
+  it("copies the cards rather than sharing them", () => {
+    const snap = snapshotDeck(saved, "2026-05-01T00:00:00.000Z");
+    expect(snap.deckId).toBe("dk_1");
+    expect(snap.registeredAt).toBe("2026-05-01T00:00:00.000Z");
+    expect(snap.mainDeck).toEqual(saved.mainDeck);
+
+    // Mutating the snapshot must not reach back into the saved deck.
+    snap.mainDeck[0]!.count = 99;
+    snap.mainDeck.push({ count: 1, name: "Intruder" });
+    expect(saved.mainDeck[0]!.count).not.toBe(99);
+    expect(saved.mainDeck.some((c) => c.name === "Intruder")).toBe(false);
+  });
+
+  it("lists only the sections a deck has, in a fixed order", () => {
+    expect(deckSections(ok(SAMPLE)).map((s) => s.key)).toEqual([
+      "champions",
+      "mainDeck",
+      "battlefields",
+      "runes",
+    ]);
+    expect(deckSections(ok("MainDeck:\n3 Gust\n")).map((s) => s.key)).toEqual(["mainDeck"]);
+  });
+
+  it("treats a record with no cards as having no list", () => {
+    expect(hasCardList(ok(SAMPLE))).toBe(true);
+    expect(
+      hasCardList({
+        legend: "Riven, The Exile",
+        champions: [],
+        mainDeck: [],
+        battlefields: [],
+        runes: [],
+        sideboard: [],
+      }),
+    ).toBe(false);
+  });
+
+  it("renders back to text that parses to the same deck", () => {
+    const deck = ok(SAMPLE);
+    const round = parseDecklist(decklistText(deck));
+    expect(round.ok).toBe(true);
+    if (round.ok) expect(round.deck).toEqual(deck);
   });
 });

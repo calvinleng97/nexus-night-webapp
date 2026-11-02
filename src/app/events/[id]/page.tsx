@@ -9,6 +9,7 @@ import { ActionForm } from "@/components/action-form";
 import { Bracket } from "@/components/bracket";
 import { EventDateControl } from "@/components/event-date";
 import { DeckPicker } from "@/components/deck-picker";
+import { DeckChips, DeckDisclosure } from "@/components/deck-view";
 import { ManagerScoreSelect, ScoreSelect } from "@/components/score-select";
 import {
   BackLink,
@@ -149,6 +150,69 @@ function MyMatch({
   );
 }
 
+/**
+ * Everyone's registered list for this event.
+ *
+ * Only shown once the event has started, or to a manager — while an event is
+ * still a draft, publishing what everyone is bringing would just be free
+ * scouting. Managers see them earlier so they can check lists beforehand.
+ */
+function DeckRoster({
+  event,
+  nameOf,
+  viewerId,
+}: {
+  event: NexusEvent;
+  nameOf: (id: UserId | null) => string;
+  viewerId: UserId;
+}) {
+  const registered = event.players.filter((p) => p.deck !== null);
+  const missing = event.players.length - registered.length;
+
+  return (
+    <div className="mb-9">
+      <SectionHead
+        count={registered.length}
+        action={missing > 0 ? <CountPill value={missing} label="no deck" tone="warn" /> : null}
+      >
+        Decks
+      </SectionHead>
+      {registered.length === 0 ? (
+        <Empty>Nobody has registered a deck.</Empty>
+      ) : (
+        <ul className="space-y-2.5">
+          {registered.map((p) => {
+            const deck = p.deck!;
+            return (
+              <Card as="li" key={p.userId} className="p-4">
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <p
+                    className={`font-medium ${p.userId === viewerId ? "text-accent" : ""}`}
+                  >
+                    {nameOf(p.userId)}
+                  </p>
+                  {deck.legend ? (
+                    <p className="text-sm text-accent">{deck.legend}</p>
+                  ) : null}
+                  {deck.name !== deck.legend ? (
+                    <p className="text-sm text-fg-dim">{deck.name}</p>
+                  ) : null}
+                </div>
+                <div className="mt-3">
+                  <DeckChips deck={deck} />
+                </div>
+                <div className="mt-3">
+                  <DeckDisclosure deck={deck} />
+                </div>
+              </Card>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export default async function EventPage(props: PageProps<"/events/[id]">) {
   const { id } = await props.params;
   const userId = await currentUserId();
@@ -284,6 +348,12 @@ export default async function EventPage(props: PageProps<"/events/[id]">) {
               ))}
             </ul>
           )}
+
+          {isManager && event.players.length > 0 ? (
+            <div className="mt-9">
+              <DeckRoster event={event} nameOf={nameOf} viewerId={userId} />
+            </div>
+          ) : null}
         </>
       ) : null}
 
@@ -372,6 +442,11 @@ export default async function EventPage(props: PageProps<"/events/[id]">) {
             </table>
           </Card>
         </div>
+      ) : null}
+
+      {/* ---------------------------------------------------------- decks */}
+      {event.status !== "draft" && event.players.length > 0 ? (
+        <DeckRoster event={event} nameOf={nameOf} viewerId={userId} />
       ) : null}
 
       {/* -------------------------------------------------------- bracket */}

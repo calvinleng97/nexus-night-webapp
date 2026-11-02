@@ -9,6 +9,7 @@ import {
   currentRound,
   setPlayerDeck,
 } from "@/lib/domain/event-machine";
+import { snapshotDeck } from "@/lib/domain/deck";
 import { SCHEMA_VERSION } from "@/lib/store/schema";
 
 // The store reads its data directory from config on first use, so point it at a
@@ -315,23 +316,21 @@ describe("file store round-trip", () => {
     });
 
     await repo.mutateEvent(event.id, player.id, (e) => {
-      const res = setPlayerDeck(e, player.id, player.id, {
-        deckId: deck.id,
-        name: deck.name,
-        legend: deck.legend,
-        registeredAt: new Date().toISOString(),
-      });
+      const res = setPlayerDeck(e, player.id, player.id, snapshotDeck(deck));
       if (!res.ok) throw new Error(res.error);
       return { event: res.value.event, log: { action: "deck_registered" } };
     });
 
     await repo.deleteDeck(deck.id, player.id);
 
-    // The snapshot survives, so the night's record still says what was played.
+    // The snapshot survives, so the night's record still says what was played,
+    // down to the cards.
     const after = (await repo.getEvent(event.id))!;
     const row = after.players.find((p) => p.userId === player.id)!;
     expect(row.deck?.legend).toBe("Riven, The Exile");
     expect(row.deck?.name).toBe("Riven list");
+    expect(row.deck?.mainDeck).toEqual([{ count: 3, name: "Gust" }]);
+    expect(row.deck?.source).toContain("3 Gust");
     expect(await repo.getDeck(deck.id)).toBeNull();
   });
 
