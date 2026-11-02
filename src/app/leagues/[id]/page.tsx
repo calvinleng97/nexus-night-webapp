@@ -231,7 +231,20 @@ export default async function LeaguePage(props: PageProps<"/leagues/[id]">) {
 
       {/* --------------------------------------------------------- players */}
       <div className="mt-9">
-        <SectionHead count={league.memberIds.length}>Players</SectionHead>
+        <SectionHead
+          count={league.memberIds.length}
+          action={
+            <Link
+              href={`/leagues/${league.id}/decks`}
+              className="inline-flex items-center gap-1 rounded-lg border border-hair bg-raised px-2.5 py-1 text-[0.7rem] font-semibold uppercase tracking-wider text-fg-dim transition-colors hover:border-accent/40 hover:text-accent"
+            >
+              Decks
+              <span aria-hidden>→</span>
+            </Link>
+          }
+        >
+          Players
+        </SectionHead>
         {/* A table, deliberately a different shape from the event cards above,
             so events and people never read as one list. */}
         <Card className="overflow-hidden">

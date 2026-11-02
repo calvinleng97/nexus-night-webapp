@@ -3,7 +3,15 @@ import { isValidEventDate } from "./schedule";
 import { newId } from "../ids";
 import { pairRound } from "./pairing";
 import { computeStandings, toPairingPlayers } from "./standings";
-import type { EventId, GameScore, NexusEvent, Pairing, Round, UserId } from "./types";
+import type {
+  EventId,
+  GameScore,
+  NexusEvent,
+  Pairing,
+  RegisteredDeck,
+  Round,
+  UserId,
+} from "./types";
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
@@ -309,6 +317,29 @@ export function forceCloseRound(
   }
   const advanced = maybeAdvance(next, now);
   return ok({ event: advanced.event, warnings: [...new Set([...warnings, ...advanced.warnings])] });
+}
+
+/**
+ * Register (or clear) the deck a player is using for this event.
+ *
+ * Players set their own; a manager can set anyone's, for the person who turns
+ * up without a phone. Allowed while the event is still running so someone can
+ * register late — it is informational and does not affect pairing.
+ */
+export function setPlayerDeck(
+  event: NexusEvent,
+  targetId: UserId,
+  actorId: UserId,
+  deck: RegisteredDeck | null,
+): Result<{ event: NexusEvent; warnings: string[] }> {
+  if (actorId !== targetId && !isManager(event, actorId))
+    return err("You can only choose your own deck.");
+  if (event.status === "complete") return err("This event has already finished.");
+  const next = structuredClone(event);
+  const player = next.players.find((p) => p.userId === targetId);
+  if (!player) return err("That player is not in this event.");
+  player.deck = deck;
+  return ok({ event: next, warnings: [] });
 }
 
 export function setEventDate(

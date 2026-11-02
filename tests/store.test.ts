@@ -2,7 +2,14 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { mkdtemp, readFile, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { startEvent, submitResult, confirmResult, currentRound } from "@/lib/domain/event-machine";
+import {
+  startEvent,
+  submitResult,
+  confirmResult,
+  currentRound,
+  setPlayerDeck,
+} from "@/lib/domain/event-machine";
+import { snapshotDeck } from "@/lib/domain/deck";
 import { SCHEMA_VERSION } from "@/lib/store/schema";
 
 // The store reads its data directory from config on first use, so point it at a
@@ -251,8 +258,86 @@ describe("file store round-trip", () => {
     expect(live.players.some((p) => p.userId === players[0]!.id)).toBe(true);
   });
 
+  it("saves a parsed deck and lists it for its owner only", async () => {
+    const mine = await makeUser("sub-deck-a", "DeckOwner");
+    const other = await makeUser("sub-deck-b", "DeckOther");
+    const deck = await repo.createDeck({
+      ownerId: mine.id,
+      name: "",
+      source: "Legend:\n1 Riven, The Exile\n\nMainDeck:\n3 Gust\n2 Defy\n",
+    });
+    // Blank name falls back to the Legend.
+    expect(deck.name).toBe("Riven, The Exile");
+    expect(deck.legend).toBe("Riven, The Exile");
+    expect(deck.mainDeck).toHaveLength(2);
+    // The original paste is kept verbatim.
+    expect(deck.source).toContain("3 Gust");
+
+    expect((await repo.listDecksForUser(mine.id)).map((d) => d.id)).toContain(deck.id);
+    expect(await repo.listDecksForUser(other.id)).toHaveLength(0);
+  });
+
+  it("refuses an unparseable decklist rather than saving a partial one", async () => {
+    const owner = await makeUser("sub-deck-bad", "DeckBad");
+    await expect(
+      repo.createDeck({ ownerId: owner.id, name: "x", source: "MainDeck:\nAstral Heron\n" }),
+    ).rejects.toThrow(/Astral Heron/);
+    expect(await repo.listDecksForUser(owner.id)).toHaveLength(0);
+  });
+
+  it("only lets the owner delete a deck", async () => {
+    const owner = await makeUser("sub-deck-own", "DeckKeeper");
+    const thief = await makeUser("sub-deck-thief", "DeckThief");
+    const deck = await repo.createDeck({
+      ownerId: owner.id,
+      name: "Mine",
+      source: "MainDeck:\n3 Gust\n",
+    });
+    await expect(repo.deleteDeck(deck.id, thief.id)).rejects.toThrow(/not your deck/i);
+    await repo.deleteDeck(deck.id, owner.id);
+    expect(await repo.getDeck(deck.id)).toBeNull();
+  });
+
+  it("keeps an event's record of a deck after the deck is deleted", async () => {
+    const owner = await makeUser("sub-reg-o", "RegOwner");
+    const player = await makeUser("sub-reg-p", "RegPlayer");
+    const league = await repo.createLeague({ name: "Decked", createdBy: owner.id });
+    await repo.joinLeague(league.id, player.id, league.joinCode);
+    const event = await repo.createEvent({
+      leagueId: league.id,
+      name: "Deck night",
+      createdBy: owner.id,
+    });
+    await repo.joinEvent(event.id, player.id);
+    const deck = await repo.createDeck({
+      ownerId: player.id,
+      name: "Riven list",
+      source: "Legend:\n1 Riven, The Exile\n\nMainDeck:\n3 Gust\n",
+    });
+
+    await repo.mutateEvent(event.id, player.id, (e) => {
+      const res = setPlayerDeck(e, player.id, player.id, snapshotDeck(deck));
+      if (!res.ok) throw new Error(res.error);
+      return { event: res.value.event, log: { action: "deck_registered" } };
+    });
+
+    await repo.deleteDeck(deck.id, player.id);
+
+    // The snapshot survives, so the night's record still says what was played,
+    // down to the cards.
+    const after = (await repo.getEvent(event.id))!;
+    const row = after.players.find((p) => p.userId === player.id)!;
+    expect(row.deck?.legend).toBe("Riven, The Exile");
+    expect(row.deck?.name).toBe("Riven list");
+    expect(row.deck?.mainDeck).toEqual([{ count: 3, name: "Gust" }]);
+    expect(row.deck?.source).toContain("3 Gust");
+    expect(await repo.getDeck(deck.id)).toBeNull();
+  });
+
   it("writes nothing outside the configured data directory", async () => {
     const entries = await readdir(dataDir);
-    expect(new Set(entries)).toEqual(new Set(["users", "leagues", "events", "log", ".locks", "meta.json"]));
+    expect(new Set(entries)).toEqual(
+      new Set(["users", "leagues", "decks", "events", "log", ".locks", "meta.json"]),
+    );
   });
 });

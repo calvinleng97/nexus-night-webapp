@@ -41,3 +41,22 @@ export function formatEventDate(value: string | null): string | null {
 export function eventOrderKey(event: { scheduledFor: string | null; createdAt: string }): string {
   return event.scheduledFor ?? event.createdAt.slice(0, 16);
 }
+
+/**
+ * Short day label for either kind of timestamp the data holds: a wall-clock
+ * event date ("2026-11-06T19:00") or an ISO instant (createdAt). Both are read
+ * as their calendar date in UTC, which keeps a typed date printing as typed.
+ */
+export function formatDay(value: string | null): string | null {
+  if (!value) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  if (!m) return null;
+  const dt = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+  if (Number.isNaN(dt.getTime())) return null;
+  return new Intl.DateTimeFormat("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(dt);
+}

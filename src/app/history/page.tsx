@@ -4,16 +4,7 @@ import { currentUserId } from "@/lib/auth";
 import { matchHistory, recordString, summarize } from "@/lib/domain/history";
 import type { UserId } from "@/lib/domain/types";
 import { getUsers, listEventsForUser } from "@/lib/store/repo";
-import { Badge, Card, Empty, PageTitle, Score, SectionHead, Tag } from "@/components/ui";
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <Card className="px-4 py-3">
-      <div className="font-mono text-lg tabular-nums leading-none">{value}</div>
-      <div className="mt-1 text-[0.7rem] uppercase tracking-wide text-fg-faint">{label}</div>
-    </Card>
-  );
-}
+import { Badge, Card, Empty, PageTitle, Score, SectionHead, Stat, Tag } from "@/components/ui";
 
 const RESULT_TONE = {
   win: "win",

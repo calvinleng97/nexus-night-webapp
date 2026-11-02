@@ -13,6 +13,9 @@ export const paths = {
   usersDir: () => join(dataRoot(), "users"),
   user: (id: string) => join(dataRoot(), "users", `${id}.json`),
 
+  decksDir: () => join(dataRoot(), "decks"),
+  deck: (id: string) => join(dataRoot(), "decks", `${id}.json`),
+
   leaguesDir: () => join(dataRoot(), "leagues"),
   league: (id: string) => join(dataRoot(), "leagues", `${id}.json`),
 

@@ -4,10 +4,12 @@ import { currentRound, pairingForUser } from "@/lib/domain/event-machine";
 import { computeStandings, recordLabel } from "@/lib/domain/standings";
 import { formatEventDate } from "@/lib/domain/schedule";
 import type { GameScore, NexusEvent, Pairing, User, UserId } from "@/lib/domain/types";
-import { getEvent, getLeague, getUsers } from "@/lib/store/repo";
+import { getEvent, getLeague, getUsers, listDecksForUser } from "@/lib/store/repo";
 import { ActionForm } from "@/components/action-form";
 import { Bracket } from "@/components/bracket";
 import { EventDateControl } from "@/components/event-date";
+import { DeckPicker } from "@/components/deck-picker";
+import { DeckChips, DeckDisclosure } from "@/components/deck-view";
 import { ManagerScoreSelect, ScoreSelect } from "@/components/score-select";
 import {
   BackLink,
@@ -148,6 +150,69 @@ function MyMatch({
   );
 }
 
+/**
+ * Everyone's registered list for this event.
+ *
+ * Only shown once the event has started, or to a manager — while an event is
+ * still a draft, publishing what everyone is bringing would just be free
+ * scouting. Managers see them earlier so they can check lists beforehand.
+ */
+function DeckRoster({
+  event,
+  nameOf,
+  viewerId,
+}: {
+  event: NexusEvent;
+  nameOf: (id: UserId | null) => string;
+  viewerId: UserId;
+}) {
+  const registered = event.players.filter((p) => p.deck !== null);
+  const missing = event.players.length - registered.length;
+
+  return (
+    <div className="mb-9">
+      <SectionHead
+        count={registered.length}
+        action={missing > 0 ? <CountPill value={missing} label="no deck" tone="warn" /> : null}
+      >
+        Decks
+      </SectionHead>
+      {registered.length === 0 ? (
+        <Empty>Nobody has registered a deck.</Empty>
+      ) : (
+        <ul className="space-y-2.5">
+          {registered.map((p) => {
+            const deck = p.deck!;
+            return (
+              <Card as="li" key={p.userId} className="p-4">
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <p
+                    className={`font-medium ${p.userId === viewerId ? "text-accent" : ""}`}
+                  >
+                    {nameOf(p.userId)}
+                  </p>
+                  {deck.legend ? (
+                    <p className="text-sm text-accent">{deck.legend}</p>
+                  ) : null}
+                  {deck.name !== deck.legend ? (
+                    <p className="text-sm text-fg-dim">{deck.name}</p>
+                  ) : null}
+                </div>
+                <div className="mt-3">
+                  <DeckChips deck={deck} />
+                </div>
+                <div className="mt-3">
+                  <DeckDisclosure deck={deck} />
+                </div>
+              </Card>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export default async function EventPage(props: PageProps<"/events/[id]">) {
   const { id } = await props.params;
   const userId = await currentUserId();
@@ -155,10 +220,17 @@ export default async function EventPage(props: PageProps<"/events/[id]">) {
 
   const event = await getEvent(id);
   if (!event) notFound();
-  const [league, users] = await Promise.all([
+  const [league, users, myDecks] = await Promise.all([
     getLeague(event.leagueId),
     getUsers([...event.players.map((p) => p.userId), ...event.managerIds]),
+    listDecksForUser(userId),
   ]);
+  // Registered Legends, snapshotted on the player when they signed up.
+  const legends = new Map(
+    event.players.filter((p) => p.deck?.legend).map((p) => [p.userId, p.deck!.legend!]),
+  );
+  const legendOf = (uid: UserId) => legends.get(uid) ?? null;
+  const myPlayer = event.players.find((p) => p.userId === userId) ?? null;
 
   const nameOf = (uid: UserId | null) =>
     uid ? ((users as Map<UserId, User>).get(uid)?.name ?? "Unknown") : "—";
@@ -248,6 +320,12 @@ export default async function EventPage(props: PageProps<"/events/[id]">) {
             </Card>
           ) : null}
 
+          {isPlayer ? (
+            <div className="mb-7">
+              <DeckPicker eventId={event.id} decks={myDecks} current={myPlayer?.deck ?? null} />
+            </div>
+          ) : null}
+
           <SectionHead count={event.players.length}>Signed up</SectionHead>
           {event.players.length === 0 ? (
             <Empty>Nobody yet.</Empty>
@@ -263,10 +341,19 @@ export default async function EventPage(props: PageProps<"/events/[id]">) {
                   }`}
                 >
                   {nameOf(p.userId)}
+                  {p.deck?.legend ? (
+                    <span className="ml-1.5 text-fg-faint">{p.deck.legend}</span>
+                  ) : null}
                 </li>
               ))}
             </ul>
           )}
+
+          {isManager && event.players.length > 0 ? (
+            <div className="mt-9">
+              <DeckRoster event={event} nameOf={nameOf} viewerId={userId} />
+            </div>
+          ) : null}
         </>
       ) : null}
 
@@ -284,6 +371,9 @@ export default async function EventPage(props: PageProps<"/events/[id]">) {
               </p>
             </Card>
           )}
+          {isPlayer ? (
+            <DeckPicker eventId={event.id} decks={myDecks} current={myPlayer?.deck ?? null} />
+          ) : null}
           <div className="flex flex-wrap gap-2 px-0.5">
             {open.length === 0 ? (
               <Tag tone="accent">All results in</Tag>
@@ -329,6 +419,11 @@ export default async function EventPage(props: PageProps<"/events/[id]">) {
                       >
                         {nameOf(s.userId)}
                       </span>
+                      {legendOf(s.userId) ? (
+                        <span className="block truncate text-[0.7rem] text-fg-faint">
+                          {legendOf(s.userId)}
+                        </span>
+                      ) : null}
                       {s.byes > 0 ? (
                         <span className="ml-2">
                           <Badge>bye</Badge>
@@ -349,11 +444,21 @@ export default async function EventPage(props: PageProps<"/events/[id]">) {
         </div>
       ) : null}
 
+      {/* ---------------------------------------------------------- decks */}
+      {event.status !== "draft" && event.players.length > 0 ? (
+        <DeckRoster event={event} nameOf={nameOf} viewerId={userId} />
+      ) : null}
+
       {/* -------------------------------------------------------- bracket */}
       {event.rounds.length > 0 ? (
         <div className="mb-9">
           <SectionHead>Bracket</SectionHead>
-          <Bracket rounds={event.rounds} nameOf={nameOf} viewerId={userId} />
+          <Bracket
+            rounds={event.rounds}
+            nameOf={nameOf}
+            legendOf={legendOf}
+            viewerId={userId}
+          />
         </div>
       ) : null}
 

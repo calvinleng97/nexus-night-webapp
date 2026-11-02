@@ -2,6 +2,7 @@
 // are migrations — bump `schemaVersion` in src/lib/store/schema.ts when editing.
 
 export type UserId = string;
+export type DeckId = string;
 export type LeagueId = string;
 export type EventId = string;
 export type PairingId = string;
@@ -29,11 +30,63 @@ export interface League {
   createdAt: string;
 }
 
+/** A decklist saved by a player, reusable across events. */
+export interface Deck {
+  id: DeckId;
+  ownerId: UserId;
+  name: string;
+  /** The Legend card, or null for a list without a Legend section. */
+  legend: string | null;
+  champions: DeckCard[];
+  mainDeck: DeckCard[];
+  battlefields: DeckCard[];
+  runes: DeckCard[];
+  sideboard: DeckCard[];
+  /** Exactly what was pasted, kept so the original is never lost. */
+  source: string;
+  createdAt: string;
+}
+
+export interface DeckCard {
+  count: number;
+  name: string;
+}
+
+/**
+ * What a player registered for one event.
+ *
+ * The whole list is snapshotted rather than looked up through deckId:
+ * deleting or editing a deck afterwards must not rewrite what the records say
+ * someone played on the night. deckId is kept only so repeat appearances of
+ * the same list can be grouped together.
+ */
+export interface RegisteredDeck {
+  deckId: DeckId;
+  name: string;
+  legend: string | null;
+  champions: DeckCard[];
+  mainDeck: DeckCard[];
+  battlefields: DeckCard[];
+  runes: DeckCard[];
+  sideboard: DeckCard[];
+  /**
+   * Exactly what was pasted when it was registered.
+   *
+   * Empty for a registration made before the cards were snapshotted, whose
+   * source deck had already been deleted by the time the data was migrated —
+   * the only case where a past event knows the deck's name but not its cards.
+   */
+  source: string;
+  registeredAt: string;
+}
+
 export type EventStatus = "draft" | "running" | "complete";
 
 export interface EventPlayer {
   userId: UserId;
   joinedAt: string;
+  /** Registered decklist, or null. Optional for now. */
+  deck: RegisteredDeck | null;
   /**
    * Round number after which the player stopped participating, or null if
    * still active. A player dropped during round R still has their round-R
