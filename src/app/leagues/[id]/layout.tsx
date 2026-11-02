@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { currentUserId } from "@/lib/auth";
 import { getLeague } from "@/lib/store/repo";
 import { ActionForm } from "@/components/action-form";
-import { LeagueTabs } from "@/components/league-tabs";
+import { RouteTabs } from "@/components/route-tabs";
 import { BackLink, Card, MicroLabel, PageTitle, codeInputClass } from "@/components/ui";
 import { joinLeagueAction, rotateJoinCodeAction } from "../../actions";
 
@@ -51,7 +51,15 @@ export default async function LeagueLayout(props: LayoutProps<"/leagues/[id]">) 
               />
             ) : null}
           </div>
-          <LeagueTabs leagueId={league.id} />
+          <RouteTabs
+            base={`/leagues/${league.id}`}
+            label="League"
+            tabs={[
+              { segment: null, label: "Events" },
+              { segment: "players", label: "Players" },
+              { segment: "decks", label: "Decks" },
+            ]}
+          />
           {props.children}
         </>
       ) : (

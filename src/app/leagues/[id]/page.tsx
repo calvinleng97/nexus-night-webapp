@@ -5,7 +5,7 @@ import { loadConfig } from "@/lib/config";
 import { eventDateParts } from "@/lib/domain/schedule";
 import { getLeague, listEventsForLeague } from "@/lib/store/repo";
 import { ActionForm } from "@/components/action-form";
-import { Badge, Card, CountPill, Empty, Field, Tag, inputClass } from "@/components/ui";
+import { Badge, Card, Empty, Field, inputClass } from "@/components/ui";
 import { createEventAction } from "../../actions";
 
 const STATUS_TONE = { draft: "accent", running: "accent", complete: "win" } as const;
@@ -112,7 +112,11 @@ export default async function LeagueEventsPage(props: PageProps<"/leagues/[id]">
                 tone={live ? "accent" : "plain"}
                 className={live ? "" : "opacity-75"}
               >
-                <Link href={`/events/${e.id}`} className="flex items-stretch gap-4 p-4 sm:p-5">
+                {/* Once started, what people want is their match: open on Bracket. */}
+                <Link
+                  href={e.status === "draft" ? `/events/${e.id}` : `/events/${e.id}/bracket`}
+                  className="flex items-stretch gap-4 p-4 sm:p-5"
+                >
                   {/* Calendar tile: the date is the first thing to read. */}
                   <div
                     className={`flex w-14 shrink-0 flex-col items-center justify-center rounded-xl border py-2 ${
@@ -134,6 +138,13 @@ export default async function LeagueEventsPage(props: PageProps<"/leagues/[id]">
                         <span className="mt-0.5 text-[0.6rem] uppercase tracking-wider text-fg-faint">
                           {when.weekday}
                         </span>
+                        <span
+                          className={`mt-1.5 w-full border-t pt-1.5 text-center font-mono text-xs tabular-nums ${
+                            live ? "border-accent/25 text-fg" : "border-hair text-fg-dim"
+                          }`}
+                        >
+                          {when.time}
+                        </span>
                       </>
                     ) : (
                       <span className="text-xs font-semibold uppercase tracking-wider text-fg-faint">
@@ -142,7 +153,7 @@ export default async function LeagueEventsPage(props: PageProps<"/leagues/[id]">
                     )}
                   </div>
 
-                  <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 flex-1 flex-col justify-center">
                     <div className="flex items-center gap-2">
                       <p className="min-w-0 flex-1 truncate text-lg font-semibold">{e.name}</p>
                       <Badge tone={STATUS_TONE[e.status]}>
@@ -150,18 +161,6 @@ export default async function LeagueEventsPage(props: PageProps<"/leagues/[id]">
                           ? `Round ${e.rounds.length}`
                           : STATUS_LABEL[e.status]}
                       </Badge>
-                    </div>
-                    <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                      {when ? <CountPill value={when.time} label="start" /> : null}
-                      {e.players.length === 0 ? (
-                        <Tag tone="warn">Needs players</Tag>
-                      ) : (
-                        <CountPill
-                          value={e.players.length}
-                          label={e.players.length === 1 ? "player" : "players"}
-                        />
-                      )}
-                      <CountPill value={e.totalRounds} label="rounds" />
                     </div>
                     {e.status === "draft" ? (
                       <p
