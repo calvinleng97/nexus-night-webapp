@@ -28,7 +28,7 @@ export function DeckPicker({
         <Link href="/decks" className="text-accent underline underline-offset-2">
           Add one
         </Link>{" "}
-        to register it here. Registering is optional.
+        to register it here.
       </p>
     ) : (
       <ActionForm action={registerDeckAction} fields={{ eventId }} label="Save" variant="primary" compact>

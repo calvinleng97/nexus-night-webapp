@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import { notFound, redirect } from "next/navigation";
 import { currentUserId } from "@/lib/auth";
 import { currentRound, pairingForUser } from "@/lib/domain/event-machine";
@@ -152,44 +151,6 @@ function MyMatch({
 }
 
 /**
- * One thing a player can do before the event, as its own card: a numbered
- * marker that turns into a check when done, a title, and a status on the right.
- */
-function StepCard({
-  n,
-  title,
-  done,
-  muted = false,
-  status,
-  children,
-}: {
-  n: number;
-  title: string;
-  done: boolean;
-  muted?: boolean;
-  status?: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <Card tone={done ? "plain" : muted ? "plain" : "accent"} className={`p-5 ${muted ? "opacity-60" : ""}`}>
-      <div className="flex items-center gap-3">
-        <span
-          aria-hidden
-          className={`inline-flex size-7 shrink-0 items-center justify-center rounded-full border font-mono text-sm ${
-            done ? "border-accent bg-accent text-ink" : "border-accent/40 text-accent"
-          }`}
-        >
-          {done ? "✓" : n}
-        </span>
-        <h2 className="min-w-0 flex-1 font-semibold">{title}</h2>
-        {status}
-      </div>
-      <div className="mt-4">{children}</div>
-    </Card>
-  );
-}
-
-/**
  * Everyone's registered list for this event.
  *
  * Only shown once the event has started, or to a manager — while an event is
@@ -296,67 +257,47 @@ export default async function EventPage(props: PageProps<"/events/[id]">) {
       </div>
 
       {/* --------------------------------------------------------- draft */}
-      {/* While open, each thing a player can do is its own card, in order:
-          sign up, then register a deck. Who else is coming sits below. */}
+      {/* While open: one card per thing a player can do — join (or, once
+          in, a green confirmation with Leave), then their deck — and who is
+          coming below. */}
       {event.status === "draft" ? (
         <>
           <div className="mb-7 space-y-3">
-            <StepCard
-              n={1}
-              title="Sign up"
-              done={isPlayer}
-              status={isPlayer ? <Tag tone="accent">✓ You&apos;re in</Tag> : null}
-            >
-              {isPlayer ? (
-                <div className="flex flex-wrap items-center gap-3">
-                  <p className="text-sm text-fg-dim">
-                    You&apos;re on the list. Pairings go up when a manager starts the event.
-                  </p>
-                  <div className="ml-auto">
-                    <ActionForm
-                      action={leaveEventAction}
-                      fields={{ eventId: event.id }}
-                      label="Leave"
-                      variant="danger"
-                      compact
-                    />
-                  </div>
-                </div>
-              ) : (
+            {isPlayer ? (
+              <Card tone="win" className="flex items-center gap-3 p-4 pl-5">
+                <p className="min-w-0 flex-1 font-semibold text-win">✓ You&apos;re in</p>
                 <ActionForm
-                  action={joinEventAction}
+                  action={leaveEventAction}
                   fields={{ eventId: event.id }}
-                  label="Join this event"
-                  variant="solid"
-                  size="lg"
+                  label="Leave"
+                  variant="danger"
+                  compact
                 />
-              )}
-            </StepCard>
+              </Card>
+            ) : (
+              <ActionForm
+                action={joinEventAction}
+                fields={{ eventId: event.id }}
+                label="Join this event"
+                variant="solid"
+                size="lg"
+              />
+            )}
 
-            <StepCard
-              n={2}
-              title="Register your deck"
-              done={!!myPlayer?.deck}
-              muted={!isPlayer}
-              status={
-                myPlayer?.deck ? (
-                  <Tag tone="accent">✓ Registered</Tag>
-                ) : (
-                  <Tag>Optional</Tag>
-                )
-              }
-            >
-              {isPlayer ? (
+            {isPlayer ? (
+              <Card className="p-5">
+                <div className="mb-4 flex items-center gap-3">
+                  <h2 className="min-w-0 flex-1 font-semibold">Your deck</h2>
+                  {myPlayer?.deck ? <Tag tone="accent">✓ Registered</Tag> : null}
+                </div>
                 <DeckPicker
                   eventId={event.id}
                   decks={myDecks}
                   current={myPlayer?.deck ?? null}
                   bare
                 />
-              ) : (
-                <p className="text-sm text-fg-faint">Sign up first, then pick a deck here.</p>
-              )}
-            </StepCard>
+              </Card>
+            ) : null}
           </div>
 
           <Card className="mb-7 p-5">
@@ -375,7 +316,7 @@ export default async function EventPage(props: PageProps<"/events/[id]">) {
               <CountPill value={event.totalRounds} label="rounds" />
             </div>
             {event.players.length === 0 ? (
-              <Empty>Nobody yet — be the first.</Empty>
+              <Empty>Nobody yet.</Empty>
             ) : (
               <ul className="mt-4 flex flex-wrap gap-2">
                 {event.players.map((p) => (

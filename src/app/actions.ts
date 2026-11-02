@@ -77,7 +77,7 @@ export async function joinLeagueAction(_prev: ActionState, form: FormData): Prom
     if (!code) return fail("Enter the league's join code.");
     await joinLeague(leagueId, userId, code);
     revalidatePath("/leagues");
-    revalidatePath(`/leagues/${leagueId}`);
+    revalidatePath(`/leagues/${leagueId}`, "layout");
     return { ok: true };
   });
 }
@@ -104,7 +104,7 @@ export async function rotateJoinCodeAction(
     const userId = await requireUserId();
     const leagueId = str(form, "leagueId");
     await rotateJoinCode(leagueId, userId);
-    revalidatePath(`/leagues/${leagueId}`);
+    revalidatePath(`/leagues/${leagueId}`, "layout");
     return { ok: true, warnings: ["The old code no longer works."] };
   });
 }
@@ -115,7 +115,7 @@ export async function leaveLeagueAction(_prev: ActionState, form: FormData): Pro
     const leagueId = str(form, "leagueId");
     await leaveLeague(leagueId, userId);
     revalidatePath("/leagues");
-    revalidatePath(`/leagues/${leagueId}`);
+    revalidatePath(`/leagues/${leagueId}`, "layout");
     return { ok: true };
   });
 }
@@ -125,7 +125,7 @@ export async function setManagerAction(_prev: ActionState, form: FormData): Prom
     const userId = await requireUserId();
     const leagueId = str(form, "leagueId");
     await setLeagueManager(leagueId, userId, str(form, "targetId"), str(form, "make") === "1");
-    revalidatePath(`/leagues/${leagueId}`);
+    revalidatePath(`/leagues/${leagueId}`, "layout");
     return { ok: true };
   });
 }
@@ -136,7 +136,7 @@ export async function removeMemberAction(_prev: ActionState, form: FormData): Pr
     const leagueId = str(form, "leagueId");
     const { warnings } = await removeLeagueMember(leagueId, userId, str(form, "targetId"));
     revalidatePath("/leagues");
-    revalidatePath(`/leagues/${leagueId}`);
+    revalidatePath(`/leagues/${leagueId}`, "layout");
     return { ok: true, warnings };
   });
 }
@@ -222,7 +222,7 @@ export async function createEventAction(_prev: ActionState, form: FormData): Pro
       totalRounds,
       scheduledFor,
     });
-    revalidatePath(`/leagues/${leagueId}`);
+    revalidatePath(`/leagues/${leagueId}`, "layout");
     redirect(`/events/${event.id}`);
   });
 }
