@@ -64,7 +64,33 @@ export function DeckListing({ deck }: { deck: DeckLike }) {
   );
 }
 
-/** A collapsed full list. The default way other people's decks are shown. */
+/**
+ * The "this expands" affordance: a list glyph and a chevron that turns when
+ * the surrounding <details> (marked `group`) is open. No words, by design.
+ */
+export function ExpandIcon() {
+  return (
+    <span
+      aria-hidden
+      className="inline-flex items-center gap-1 rounded-lg border border-hair bg-raised px-1.5 py-1 text-fg-faint transition-colors group-hover:border-accent/40 group-hover:text-accent group-open:border-accent/40 group-open:text-accent"
+    >
+      <svg viewBox="0 0 16 16" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+        <path d="M5.5 4h8M5.5 8h8M5.5 12h8" />
+        <circle cx="2.5" cy="4" r="0.6" fill="currentColor" stroke="none" />
+        <circle cx="2.5" cy="8" r="0.6" fill="currentColor" stroke="none" />
+        <circle cx="2.5" cy="12" r="0.6" fill="currentColor" stroke="none" />
+      </svg>
+      <svg viewBox="0 0 16 16" className="size-3 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 6l4 4 4-4" />
+      </svg>
+    </span>
+  );
+}
+
+/**
+ * A collapsed full list, opened from a small icon button. `label` is only for
+ * screen readers. Decks whose cards were never recorded show nothing.
+ */
 export function DeckDisclosure({
   deck,
   label = "Decklist",
@@ -72,11 +98,12 @@ export function DeckDisclosure({
   deck: DeckLike;
   label?: string;
 }) {
+  if (!hasCardList(deck)) return null;
   return (
     <details className="group">
-      <summary className="cursor-pointer list-none text-xs text-fg-faint transition-colors hover:text-fg">
-        <span className="inline-block transition-transform group-open:rotate-90">▸</span> {label}
-        {hasCardList(deck) ? null : <span className="ml-1.5">(not recorded)</span>}
+      <summary className="inline-flex cursor-pointer list-none" title={label}>
+        <span className="sr-only">{label}</span>
+        <ExpandIcon />
       </summary>
       <div className="mt-2.5">
         <DeckListing deck={deck} />

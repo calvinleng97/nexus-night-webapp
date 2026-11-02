@@ -1,105 +1,150 @@
-import type { NexusEvent, UserId } from "@/lib/domain/types";
-import { DeckDisclosure } from "@/components/deck-view";
-import { Card, CountPill, Empty, SectionHead, Tag } from "@/components/ui";
+import { loadConfig } from "@/lib/config";
+import { shortLegend } from "@/lib/domain/deck";
+import { computeLeagueElo } from "@/lib/domain/elo";
+import { computeStandings, recordLabel } from "@/lib/domain/standings";
+import type { EventPlayer, Standing } from "@/lib/domain/types";
+import { getLeague, listEventsForLeague } from "@/lib/store/repo";
+import { DeckListing, ExpandIcon } from "@/components/deck-view";
+import { Badge, Card, Empty } from "@/components/ui";
 import { loadEventView } from "../load";
 
 /**
- * Everyone's registered list for this event, visible to all from the moment
- * it's registered — these are friendly nights, so looking around is welcome.
+ * Player · Deck · Elo · Record, shared by the header and every row. On phones
+ * the Deck column folds under the player's name so names have room.
  */
-function DeckRoster({
-  event,
-  nameOf,
-  viewerId,
-}: {
-  event: NexusEvent;
-  nameOf: (id: UserId | null) => string;
-  viewerId: UserId;
-}) {
-  const registered = event.players.filter((p) => p.deck !== null);
-  const missing = event.players.length - registered.length;
+const ROW =
+  "grid grid-cols-[minmax(0,1fr)_2.75rem_3.25rem_2.75rem] items-center gap-x-2 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_3.25rem_3.5rem_3rem] sm:gap-x-3";
 
-  return (
-    <div>
-      <SectionHead
-        count={registered.length}
-        action={missing > 0 ? <CountPill value={missing} label="no deck" tone="warn" /> : null}
-      >
-        Decks
-      </SectionHead>
-      {registered.length === 0 ? (
-        <Empty>Nobody has registered a deck.</Empty>
-      ) : (
-        <ul className="space-y-2.5">
-          {registered.map((p) => {
-            const deck = p.deck!;
-            return (
-              <Card as="li" key={p.userId} className="p-4">
-                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <p className={`font-medium ${p.userId === viewerId ? "text-accent" : ""}`}>
-                    {nameOf(p.userId)}
-                  </p>
-                  {deck.legend ? <p className="text-sm text-accent">{deck.legend}</p> : null}
-                  {deck.name !== deck.legend ? (
-                    <p className="text-sm text-fg-dim">{deck.name}</p>
-                  ) : null}
-                </div>
-                <div className="mt-3">
-                  <DeckDisclosure deck={deck} />
-                </div>
-              </Card>
-            );
-          })}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-/** The Players tab: who is signed up, and what they're playing. */
+/**
+ * The Players tab: everyone in the event as one table — their deck, their
+ * league Elo, and their record here, which fills in as results are confirmed.
+ * A row with a deck opens to show the full list; anyone can look.
+ */
 export default async function EventPlayersPage(props: PageProps<"/events/[id]/players">) {
   const { id } = await props.params;
   const { userId, event, nameOf } = await loadEventView(id);
 
-  return (
-    <div className="space-y-9">
-      <Card className="p-5">
-        <div className="flex items-center gap-3">
-          <h2 className="font-semibold">Signed up</h2>
-          <div className="flex-1" />
-          {event.players.length === 0 ? (
-            <Tag tone="warn">Needs players</Tag>
-          ) : (
-            <CountPill
-              value={event.players.length}
-              label={event.players.length === 1 ? "player" : "players"}
-              tone="accent"
-            />
-          )}
-        </div>
-        {event.players.length === 0 ? (
-          <Empty>Nobody yet.</Empty>
-        ) : (
-          <ul className="mt-4 flex flex-wrap gap-2">
-            {event.players.map((p) => (
-              <li
-                key={p.userId}
-                className={`rounded-full border px-3 py-1.5 text-sm ${
-                  p.userId === userId
-                    ? "border-accent/40 bg-accent/10 text-accent"
-                    : "border-hair-soft bg-raised text-fg-dim"
-                } ${p.droppedAfterRound !== null ? "line-through opacity-60" : ""}`}
-              >
-                {nameOf(p.userId)}
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+  const league = await getLeague(event.leagueId);
+  const leagueEvents = league ? await listEventsForLeague(league.id) : [];
+  const elo = new Map(
+    computeLeagueElo(leagueEvents, league?.memberIds ?? [], loadConfig().elo).map((r) => [
+      r.userId,
+      r.rating,
+    ]),
+  );
 
-      {event.players.length > 0 ? (
-        <DeckRoster event={event} nameOf={nameOf} viewerId={userId} />
-      ) : null}
-    </div>
+  const started = event.status !== "draft";
+  const standings = new Map(computeStandings(event).map((s) => [s.userId, s]));
+  // Before the start, sign-up order; after, the order they're standing in.
+  const players: EventPlayer[] = started
+    ? computeStandings(event)
+        .map((s) => event.players.find((p) => p.userId === s.userId))
+        .filter((p): p is EventPlayer => p !== undefined)
+    : event.players;
+
+  if (players.length === 0)
+    return (
+      <Card className="p-5">
+        <Empty>Nobody yet.</Empty>
+      </Card>
+    );
+
+  return (
+    <Card className="overflow-hidden">
+      <div
+        className={`${ROW} border-b border-hair px-4 py-2.5 text-xs uppercase tracking-wide text-fg-faint`}
+      >
+        <span>Player</span>
+        <span className="hidden sm:block">Deck</span>
+        <span className="text-right">Elo</span>
+        <span className="text-right">Record</span>
+        <span />
+      </div>
+      <ul>
+        {players.map((p) => (
+          <PlayerRow
+            key={p.userId}
+            player={p}
+            name={nameOf(p.userId)}
+            me={p.userId === userId}
+            elo={elo.get(p.userId) ?? null}
+            standing={started ? (standings.get(p.userId) ?? null) : null}
+          />
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
+function PlayerRow({
+  player,
+  name,
+  me,
+  elo,
+  standing,
+}: {
+  player: EventPlayer;
+  name: string;
+  me: boolean;
+  elo: number | null;
+  standing: Standing | null;
+}) {
+  const deck = player.deck;
+  const dropped = player.droppedAfterRound !== null;
+  const deckLabel = deck ? (shortLegend(deck.legend) ?? deck.name) : null;
+  const cells = (
+    <>
+      <span className="min-w-0">
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span
+            className={`truncate ${me ? "text-accent" : ""} ${dropped ? "text-fg-faint line-through" : ""}`}
+          >
+            {name}
+          </span>
+          {standing && standing.byes > 0 ? <Badge>bye</Badge> : null}
+        </span>
+        {deckLabel ? (
+          <span className="block truncate text-xs text-fg-dim sm:hidden">{deckLabel}</span>
+        ) : null}
+      </span>
+      <span className="hidden truncate text-fg-dim sm:block">
+        {deckLabel ?? <span className="text-fg-faint">—</span>}
+      </span>
+      <span className="text-right font-mono tabular-nums">{elo ?? "—"}</span>
+      <span className="text-right font-mono tabular-nums text-fg-dim">
+        {standing ? recordLabel(standing) : "—"}
+      </span>
+    </>
+  );
+
+  const rowClass = `border-b border-hair-soft last:border-0 ${me ? "bg-accent/5" : ""}`;
+
+  if (!deck)
+    return (
+      <li className={rowClass}>
+        <div className={`${ROW} px-4 py-2.5 text-sm`}>
+          {cells}
+          <span />
+        </div>
+      </li>
+    );
+
+  return (
+    <li className={rowClass}>
+      <details className="group">
+        <summary
+          className={`${ROW} cursor-pointer list-none px-4 py-2.5 text-sm transition-colors hover:bg-raised`}
+        >
+          {cells}
+          <span className="flex justify-end">
+            <span className="sr-only">Decklist</span>
+            <ExpandIcon />
+          </span>
+        </summary>
+        <div className="px-4 pb-4">
+          <DeckListing deck={deck} />
+        </div>
+      </details>
+    </li>
   );
 }
