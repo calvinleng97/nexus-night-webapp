@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { eventOrderKey, formatEventDate, isValidEventDate } from "@/lib/domain/schedule";
+import { eventDateParts, eventOrderKey, formatEventDate, isValidEventDate } from "@/lib/domain/schedule";
 import { emptyEvent, setEventDate } from "@/lib/domain/event-machine";
 
 const base = () =>
@@ -122,5 +122,21 @@ describe("setting the date on an event", () => {
     const original = base();
     setEventDate(original, "mgr", "2026-11-06T19:00");
     expect(original.scheduledFor).toBeNull();
+  });
+});
+
+describe("date tile parts", () => {
+  it("splits a date into what a calendar tile shows", () => {
+    expect(eventDateParts("2026-11-03T19:00")).toEqual({
+      weekday: "Tue",
+      day: "3",
+      month: "Nov",
+      time: "19:00",
+    });
+  });
+
+  it("returns null when there is no usable date", () => {
+    expect(eventDateParts(null)).toBeNull();
+    expect(eventDateParts("2026-02-31T19:00")).toBeNull();
   });
 });
