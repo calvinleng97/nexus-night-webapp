@@ -9,7 +9,7 @@ import {
 } from "@/lib/domain/league-decks";
 import { formatDay } from "@/lib/domain/schedule";
 import { getLeague, getUsers, listEventsForLeague } from "@/lib/store/repo";
-import { DeckChips, DeckDisclosure } from "@/components/deck-view";
+import { DeckDisclosure } from "@/components/deck-view";
 import {
   Badge,
   Card,
@@ -17,7 +17,6 @@ import {
   Empty,
   SectionHead,
   Stat,
-  Tag,
 } from "@/components/ui";
 
 function record(d: Pick<PlayedDeck, "wins" | "losses" | "draws">): string {
@@ -48,7 +47,6 @@ export default async function LeagueDecksPage(props: PageProps<"/leagues/[id]/de
   const legends = legendUsage(history);
 
   const withDecks = history.filter((h) => h.decks.length > 0);
-  const withoutDecks = history.filter((h) => h.decks.length === 0);
   const nameOf = (uid: string) => users.get(uid)?.name ?? "Unknown";
 
   return (
@@ -126,10 +124,6 @@ export default async function LeagueDecksPage(props: PageProps<"/leagues/[id]/de
                       </span>
                     </div>
 
-                    <div className="mt-3">
-                      <DeckChips deck={deck.snapshot} />
-                    </div>
-
                     <ul className="mt-3 divide-y divide-hair-soft border-t border-hair-soft">
                       {deck.outings.map((o) => (
                         <li
@@ -166,18 +160,6 @@ export default async function LeagueDecksPage(props: PageProps<"/leagues/[id]/de
         </>
       )}
 
-      {withoutDecks.length > 0 ? (
-        <div className="mt-9 border-t border-hair-soft pt-6">
-          <SectionHead count={withoutDecks.length}>Nothing registered</SectionHead>
-          <ul className="flex flex-wrap gap-2">
-            {withoutDecks.map((p) => (
-              <li key={p.userId}>
-                <Tag tone={p.userId === userId ? "accent" : "plain"}>{nameOf(p.userId)}</Tag>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
     </div>
   );
 }

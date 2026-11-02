@@ -1,14 +1,11 @@
 import type { NexusEvent, UserId } from "@/lib/domain/types";
-import { DeckChips, DeckDisclosure } from "@/components/deck-view";
+import { DeckDisclosure } from "@/components/deck-view";
 import { Card, CountPill, Empty, SectionHead, Tag } from "@/components/ui";
 import { loadEventView } from "../load";
 
 /**
- * Everyone's registered list for this event.
- *
- * Only shown once the event has started, or to a manager — while an event is
- * still open, publishing what everyone is bringing would just be free
- * scouting. Managers see them earlier so they can check lists beforehand.
+ * Everyone's registered list for this event, visible to all from the moment
+ * it's registered — these are friendly nights, so looking around is welcome.
  */
 function DeckRoster({
   event,
@@ -48,9 +45,6 @@ function DeckRoster({
                   ) : null}
                 </div>
                 <div className="mt-3">
-                  <DeckChips deck={deck} />
-                </div>
-                <div className="mt-3">
                   <DeckDisclosure deck={deck} />
                 </div>
               </Card>
@@ -65,8 +59,7 @@ function DeckRoster({
 /** The Players tab: who is signed up, and what they're playing. */
 export default async function EventPlayersPage(props: PageProps<"/events/[id]/players">) {
   const { id } = await props.params;
-  const { userId, event, nameOf, isManager } = await loadEventView(id);
-  const showDecks = event.players.length > 0 && (event.status !== "draft" || isManager);
+  const { userId, event, nameOf } = await loadEventView(id);
 
   return (
     <div className="space-y-9">
@@ -104,7 +97,9 @@ export default async function EventPlayersPage(props: PageProps<"/events/[id]/pl
         )}
       </Card>
 
-      {showDecks ? <DeckRoster event={event} nameOf={nameOf} viewerId={userId} /> : null}
+      {event.players.length > 0 ? (
+        <DeckRoster event={event} nameOf={nameOf} viewerId={userId} />
+      ) : null}
     </div>
   );
 }

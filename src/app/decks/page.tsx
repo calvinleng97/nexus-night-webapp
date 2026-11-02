@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { currentUserId } from "@/lib/auth";
 import { listDecksForUser } from "@/lib/store/repo";
 import { ActionForm } from "@/components/action-form";
-import { DeckChips, DeckDisclosure } from "@/components/deck-view";
+import { DeckDisclosure } from "@/components/deck-view";
 import { Card, Empty, Field, PageTitle, SectionHead, inputClass } from "@/components/ui";
 import { addDeckAction, deleteDeckAction } from "../actions";
 
@@ -113,9 +113,6 @@ export default async function DecksPage(props: PageProps<"/decks">) {
                   confirm="Confirm delete"
                   compact
                 />
-              </div>
-              <div className="mt-3">
-                <DeckChips deck={d} />
               </div>
               <div className="mt-3">
                 <DeckDisclosure deck={d} label="Full list" />
