@@ -11,10 +11,10 @@ const PORTRAIT_W = 340;
 const LANDSCAPE_W = 460;
 const GAP = 12;
 
-type Pos = { left: number; top: number; width: number; height: number };
+export type Pos = { left: number; top: number; width: number; height: number };
 
 /** Beside the name, on whichever side has room, kept inside the viewport. */
-function place(anchor: DOMRect, landscape: boolean): Pos {
+export function place(anchor: DOMRect, landscape: boolean): Pos {
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const width = Math.min(landscape ? LANDSCAPE_W : PORTRAIT_W, vw - 2 * GAP);
@@ -64,13 +64,6 @@ export function CardPreview({
     return () => window.removeEventListener("scroll", hide, { capture: true });
   }, [hover]);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open]);
-
   return (
     <>
       <a
@@ -99,65 +92,92 @@ export function CardPreview({
         {children}
       </a>
 
-      {hover
-        ? createPortal(
-            <div
-              aria-hidden
-              className="pointer-events-none fixed z-50 overflow-hidden rounded-[4.5%] bg-raised shadow-2xl shadow-black/70 ring-1 ring-white/10"
-              style={{ left: hover.left, top: hover.top, width: hover.width, height: hover.height }}
-            >
-              <Image
-                src={src}
-                alt=""
-                fill
-                sizes={`${hover.width}px`}
-                className="object-cover"
-              />
-            </div>,
-            document.body,
-          )
-        : null}
-
-      {open
-        ? createPortal(
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-label={name}
-              className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black/85 p-4 backdrop-blur-sm"
-              onClick={() => setOpen(false)}
-            >
-              <Image
-                src={src}
-                alt={name}
-                width={landscape ? 1039 : 744}
-                height={landscape ? 744 : 1039}
-                sizes="92vw"
-                className={`h-auto rounded-[4.5%] bg-raised shadow-2xl ${
-                  landscape ? "w-full max-w-xl" : "max-h-[75dvh] w-auto max-w-full"
-                }`}
-              />
-              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                <a
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex h-10 items-center rounded-xl border border-hair bg-raised px-4 text-sm font-medium text-fg"
-                >
-                  Wiki ↗
-                </a>
-                <button
-                  type="button"
-                  onClick={() => setOpen(false)}
-                  className="inline-flex h-10 items-center rounded-xl border border-accent bg-accent px-5 text-sm font-semibold text-ink"
-                >
-                  Close
-                </button>
-              </div>
-            </div>,
-            document.body,
-          )
-        : null}
+      {hover ? <FloatingCard src={src} pos={hover} /> : null}
+      {open ? (
+        <CardLightbox src={src} name={name} landscape={landscape} href={href} onClose={() => setOpen(false)} />
+      ) : null}
     </>
+  );
+}
+
+/** The full-size card floating at `pos`; looks only, never takes the pointer. */
+export function FloatingCard({ src, pos }: { src: string; pos: Pos }) {
+  return createPortal(
+    <div
+      aria-hidden
+      className="pointer-events-none fixed z-50 overflow-hidden rounded-[4.5%] bg-raised shadow-2xl shadow-black/70 ring-1 ring-white/10"
+      style={{ left: pos.left, top: pos.top, width: pos.width, height: pos.height }}
+    >
+      <Image src={src} alt="" fill sizes={`${pos.width}px`} className="object-cover" />
+    </div>,
+    document.body,
+  );
+}
+
+/**
+ * The card full-screen, for touchscreens. `actions` replaces the default
+ * Wiki link (the deck editor puts its add/remove buttons here).
+ */
+export function CardLightbox({
+  src,
+  name,
+  landscape,
+  href,
+  onClose,
+  actions,
+}: {
+  src: string;
+  name: string;
+  landscape: boolean;
+  href?: string;
+  onClose: () => void;
+  actions?: ReactNode;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={name}
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black/85 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <Image
+        src={src}
+        alt={name}
+        width={landscape ? 1039 : 744}
+        height={landscape ? 744 : 1039}
+        sizes="92vw"
+        className={`h-auto rounded-[4.5%] bg-raised shadow-2xl ${
+          landscape ? "w-full max-w-xl" : "max-h-[70dvh] w-auto max-w-full"
+        }`}
+      />
+      <div className="flex flex-wrap items-center justify-center gap-2" onClick={(e) => e.stopPropagation()}>
+        {actions ??
+          (href ? (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-10 items-center rounded-xl border border-hair bg-raised px-4 text-sm font-medium text-fg"
+            >
+              Wiki ↗
+            </a>
+          ) : null)}
+        <button
+          type="button"
+          onClick={onClose}
+          className="inline-flex h-10 items-center rounded-xl border border-accent bg-accent px-5 text-sm font-semibold text-ink"
+        >
+          Close
+        </button>
+      </div>
+    </div>,
+    document.body,
   );
 }
