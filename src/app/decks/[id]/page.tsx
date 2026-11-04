@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { currentUserId } from "@/lib/auth";
 import { decklistText } from "@/lib/domain/deck";
+import { deckVersions, diffDecks, recordByVersion } from "@/lib/domain/deck-versions";
 import { formatDay } from "@/lib/domain/schedule";
 import { recordLabel } from "@/lib/domain/standings";
 import { getDeck } from "@/lib/store/repo";
@@ -39,6 +40,8 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
   if (!deck || deck.ownerId !== userId) notFound();
   const played = (await deckStatsFor(userId)).get(deck.id) ?? null;
   const editing = edit === "1";
+  const versions = deckVersions(deck);
+  const byVersion = recordByVersion(played?.outings ?? []);
 
   return (
     <div>
@@ -144,6 +147,67 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
         <DeckListing deck={deck} showLegend={false} />
       </Section>
 
+      {versions.length > 1 ? (
+        <Section title="Versions" count={versions.length}>
+          <Card className="overflow-hidden">
+            <ul className="divide-y divide-hair-soft">
+              {versions.map((v, i) => {
+                const prev = versions[i + 1];
+                const diff = prev ? diffDecks(prev, v) : null;
+                const rec = byVersion.get(v.version);
+                return (
+                  <li key={v.version} className="px-4 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <Pill tone={v.current ? "accent" : "neutral"}>v{v.version}</Pill>
+                      <span className="min-w-0 flex-1 truncate text-sm text-fg-dim">
+                        {v.current ? "Current" : null}
+                        {v.current ? " · " : null}
+                        {formatDay(v.savedAt)}
+                      </span>
+                      {rec ? (
+                        <>
+                          <span className="font-mono text-sm tabular-nums text-fg-dim">
+                            {recordLabel(rec)}
+                          </span>
+                          <WinRate rate={winRateOf(rec)} />
+                        </>
+                      ) : (
+                        <Pill size="sm">Unplayed</Pill>
+                      )}
+                    </div>
+                    {diff ? (
+                      <ul className="mt-2.5 flex flex-wrap gap-1.5" aria-label={`Changes in v${v.version}`}>
+                        {diff.legend ? (
+                          <li>
+                            <Pill size="sm" tone="accent">
+                              Legend → {diff.legend[1] ?? "none"}
+                            </Pill>
+                          </li>
+                        ) : null}
+                        {diff.cards.map((c) => (
+                          <li key={`${c.section}-${c.name}`}>
+                            <Pill size="sm" tone={c.delta > 0 ? "win" : "loss"}>
+                              <span className="font-mono tabular-nums">
+                                {c.delta > 0 ? "+" : "−"}
+                                {Math.abs(c.delta)}
+                              </span>
+                              {c.name}
+                              {c.section !== "Main deck" ? (
+                                <span className="text-fg-faint">{c.section.toLowerCase()}</span>
+                              ) : null}
+                            </Pill>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
+        </Section>
+      ) : null}
+
       {played ? (
         <Section title="Played at" count={played.outings.length}>
           <Card className="overflow-hidden">
@@ -158,6 +222,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
                       {formatDay(o.at)?.replace(/ \d{4}$/, "")}
                     </span>
                     <span className="min-w-0 flex-1 truncate">{o.eventName}</span>
+                    {versions.length > 1 ? <Pill size="sm">v{o.version}</Pill> : null}
                     {o.status === "running" ? (
                       <Pill size="sm" tone="win" pulse>
                         live

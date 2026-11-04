@@ -218,6 +218,7 @@ export function snapshotDeck(
     runes: DeckCard[];
     sideboard: DeckCard[];
     source: string;
+    version?: number;
   },
   now: string = new Date().toISOString(),
 ): {
@@ -231,6 +232,7 @@ export function snapshotDeck(
   sideboard: DeckCard[];
   source: string;
   registeredAt: string;
+  version: number;
 } {
   return {
     deckId: deck.id,
@@ -243,6 +245,7 @@ export function snapshotDeck(
     sideboard: deck.sideboard.map((c) => ({ ...c })),
     source: deck.source,
     registeredAt: now,
+    version: deck.version ?? 1,
   };
 }
 

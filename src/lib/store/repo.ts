@@ -13,6 +13,7 @@ import type {
   UserId,
 } from "../domain/types";
 import { parseDecklist, snapshotDeck, suggestDeckName } from "../domain/deck";
+import { sameCards } from "../domain/deck-versions";
 import {
   appendJsonl,
   ensureDir,
@@ -421,19 +422,46 @@ export async function updateDeck(
     if (deck.ownerId !== actorId) throw new Error("That is not your deck.");
     const parsed = parseDecklist(input.source);
     if (!parsed.ok) throw new Error(parsed.error);
-    const next: Deck = {
-      ...deck,
-      name: input.name.trim() || suggestDeckName(parsed.deck),
+    const cards = {
       legend: parsed.deck.legend,
       champions: parsed.deck.champions,
       mainDeck: parsed.deck.mainDeck,
       battlefields: parsed.deck.battlefields,
       runes: parsed.deck.runes,
       sideboard: parsed.deck.sideboard,
+    };
+    // Changing the cards starts a new version and files the old list away;
+    // a rename, or a re-paste of the same cards, just updates in place.
+    const changed = !sameCards(deck, cards);
+    const now = new Date().toISOString();
+    const next: Deck = {
+      ...deck,
+      ...cards,
+      name: input.name.trim() || suggestDeckName(parsed.deck),
       source: input.source,
+      ...(changed
+        ? {
+            version: (deck.version ?? 1) + 1,
+            revisedAt: now,
+            history: [
+              ...(deck.history ?? []),
+              {
+                version: deck.version ?? 1,
+                savedAt: deck.revisedAt ?? deck.createdAt,
+                legend: deck.legend,
+                champions: deck.champions,
+                mainDeck: deck.mainDeck,
+                battlefields: deck.battlefields,
+                runes: deck.runes,
+                sideboard: deck.sideboard,
+                source: deck.source,
+              },
+            ],
+          }
+        : {}),
     };
     await writeJsonAtomic(paths.deck(id), next);
-    await audit({ action: "deck_updated", deckId: id, actor: actorId });
+    await audit({ action: "deck_updated", deckId: id, actor: actorId, version: next.version ?? 1 });
     return next;
   });
 }

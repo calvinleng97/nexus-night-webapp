@@ -8,7 +8,7 @@ import { leagueDeckHistory } from "@/lib/domain/league-decks";
 import { recordLabel } from "@/lib/domain/standings";
 import type { RegisteredDeck, UserId } from "@/lib/domain/types";
 import { DeckListing } from "@/components/deck-view";
-import { getUsers, listEventsForUser } from "@/lib/store/repo";
+import { getUsers, listDecksForUser, listEventsForUser } from "@/lib/store/repo";
 import {
   Avatar,
   Card,
@@ -34,7 +34,8 @@ export default async function HistoryPage() {
   const userId = await currentUserId();
   if (!userId) redirect("/");
 
-  const events = await listEventsForUser(userId);
+  const [events, saved] = await Promise.all([listEventsForUser(userId), listDecksForUser(userId)]);
+  const versioned = new Set(saved.filter((d) => (d.version ?? 1) > 1).map((d) => d.id));
   const entries = matchHistory(events, userId);
   const totals = summarize(entries);
 
@@ -164,7 +165,15 @@ export default async function HistoryPage() {
                   deck={mine}
                   lead={<span className="w-7 shrink-0 text-xs font-semibold text-accent">You</span>}
                   title={mine ? mine.name : "No deck"}
-                  subtitle={mine?.legend && mine.legend !== mine.name ? shortLegend(mine.legend) : null}
+                  subtitle={
+                    [
+                      mine?.legend && mine.legend !== mine.name ? shortLegend(mine.legend) : null,
+                      // Which version you brought, once the deck has more than one.
+                      mine && versioned.has(mine.deckId) ? `v${mine.version ?? 1}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ") || null
+                  }
                   tone="mine"
                 />
 
