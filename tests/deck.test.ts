@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   cardTotal,
+  cardWikiUrl,
   deckSections,
   decklistText,
   hasCardList,
@@ -236,5 +237,25 @@ describe("snapshots", () => {
     const round = parseDecklist(decklistText(deck));
     expect(round.ok).toBe(true);
     if (round.ok) expect(round.deck).toEqual(deck);
+  });
+});
+
+describe("wiki links", () => {
+  it("spells the URL the way the wiki does", () => {
+    expect(cardWikiUrl("Master Yi, Meditative")).toBe(
+      "https://wiki.leagueoflegends.com/en-us/Riftbound:Master_Yi,_Meditative",
+    );
+  });
+
+  it("keeps apostrophes literal", () => {
+    expect(cardWikiUrl("Zhonya's Hourglass")).toBe(
+      "https://wiki.leagueoflegends.com/en-us/Riftbound:Zhonya's_Hourglass",
+    );
+  });
+
+  it("encodes characters a URL path cannot carry", () => {
+    expect(cardWikiUrl("What?")).toBe(
+      "https://wiki.leagueoflegends.com/en-us/Riftbound:What%3F",
+    );
   });
 });
