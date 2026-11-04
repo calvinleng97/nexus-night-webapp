@@ -1,16 +1,24 @@
 /**
  * Which Riftbound cards a player should watch for in a combat.
  *
- * Researched from the full card pool (Origins through Vendetta, plus promos
- * and Proving Grounds) as listed by api.riftcodex.com, November 2026.
+ * First researched from api.riftcodex.com (Origins through Vendetta), then
+ * completed in November 2026 against every card's rules text on the League
+ * wiki — the source `npm run sync:cards` uses, which also has the newest set.
+ * The wiki tags each card's timing ([Action]/[Reaction]) and effects
+ * (Modifier, Kill, Stun, Shield, Nonstandard Movement, …), so the pass was:
+ * every timed card with a combat effect, then the criteria below by hand.
  *
  * A combat trick is a card with [Action] or [Reaction] timing — on the card,
  * or on an ability of a unit or gear — whose effect can change how a combat
  * goes: Might up or down, damage, kills, stuns, Shield/Tank/Assault, damage
  * or death prevention, moving or bouncing units, adding units to the fight,
- * stealing a unit, or removing the Equipment a unit is wearing. Pure counters,
- * card draw, rune/energy abilities, and effects that only reach the base
- * (tokens, recursion) are left out.
+ * stealing a unit, or removing the Equipment a unit is wearing — and
+ * counters, including cards that take control of a spell instead (Mystic
+ * Reversal), since a counter is the other thing to play around before you
+ * commit to a fight. Card draw, rune/energy abilities, and effects that only
+ * reach the base (tokens, recursion) are left out, as are Legends'
+ * abilities: a Legend is always face up on the table, so it is never a
+ * surprise.
  *
  * Hidden cards are those with the [Hidden] keyword themselves, not cards that
  * merely refer to it. A card can be both.
@@ -21,29 +29,35 @@ import type { DeckCard } from "./types";
 export type Speed = "action" | "reaction";
 
 export const COMBAT_TRICKS: Record<string, Speed> = {
+  "Abandon": "reaction",
   "Against the Odds": "reaction",
   "Alpha Strike": "action",
+  "An Offer You Can't Refuse": "action",
   "Angle Shot": "reaction",
   "Arcane Shift": "action",
   "Azir, Ascendant": "action",
   "Back Off": "action",
   "Back to Back": "reaction",
+  "Battle Preparations": "reaction",
   "Bellows Breath": "action",
   "Blast of Power": "action",
   "Block": "action",
   "Blood Money": "action",
   "Blood Rush": "action",
   "Bonds of Strength": "reaction",
+  "Brawl": "action",
   "Bullet Time": "action",
   "Call to Glory": "reaction",
   "Cannon Barrage": "reaction",
   "Challenge": "action",
   "Cleave": "action",
   "Combat Experience": "reaction",
+  "Consult the Heavens": "reaction",
   "Consuming Curse": "action",
   "Convergent Mutation": "reaction",
   "Counter Strike": "reaction",
   "Crescent Strike": "action",
+  "Crumbling Sands": "reaction",
   "Danger Zone": "reaction",
   "Deathgrip": "reaction",
   "Decisive Strike": "action",
@@ -51,11 +65,14 @@ export const COMBAT_TRICKS: Record<string, Speed> = {
   "Decree of Insight": "reaction",
   "Decree of Rage": "action",
   "Defiant Dance": "reaction",
+  "Defy": "reaction",
+  "Discipline": "reaction",
   "Disintegrate": "action",
   "Divining Shells": "action",
   "Dominus": "action",
   "Drag Under": "action",
   "Eclipse": "reaction",
+  "Ekko, Revolutionary": "action",
   "Emperor's Divide": "action",
   "En Garde": "reaction",
   "Existential Dread": "action",
@@ -68,6 +85,8 @@ export const COMBAT_TRICKS: Record<string, Speed> = {
   "Final Spark": "action",
   "Flash": "reaction",
   "Flurry of Blades": "reaction",
+  "Flurry of Feathers": "reaction",
+  "For Demacia!": "reaction",
   "Forgotten Signpost": "action",
   "Fox-Fire": "action",
   "Friendship": "reaction",
@@ -78,33 +97,48 @@ export const COMBAT_TRICKS: Record<string, Speed> = {
   "Grim Resolve": "action",
   "Gust": "reaction",
   "Guttural Roar": "action",
+  "Hard Bargain": "reaction",
   "Here to Help": "action",
   "Heroic Charge": "action",
   "Hextech Ray": "action",
   "Hidden Blade": "action",
+  "High Note": "reaction",
   "Highlander": "reaction",
+  "Hold 'Em": "action",
+  "Hush": "reaction",
   "Imperial Decree": "action",
+  "Improvised Projectile": "action",
   "Incinerate": "action",
   "Janna, Savior": "reaction",
   "Keeper's Verdict": "action",
   "Ki Barrier": "reaction",
+  "Ki Burst": "action",
   "Last Breath": "action",
+  "Last Caress": "reaction",
   "Last Stand": "action",
+  "Lilting Lullaby": "reaction",
+  "Lost to the Sands": "action",
   "Lotus Trap": "reaction",
   "Marching Orders": "action",
   "Mesmerize": "reaction",
   "Monster Harpoon": "action",
   "Moonfall": "action",
   "Moonlight Affliction": "reaction",
+  "Mystic Reversal": "reaction",
+  "Not So Fast": "reaction",
   "Noxian Guillotine": "action",
+  "Ntofo Strikes": "action",
+  "One-Two Punch": "action",
   "Overt Operation": "action",
   "Portal Rescue": "action",
   "Possession": "action",
   "Primal Strength": "action",
   "Punch First": "action",
   "Rebuke": "action",
+  "Rebuttal": "reaction",
   "Relentless Pursuit": "action",
   "Rengar, Pouncing": "reaction",
+  "Repulse": "reaction",
   "Resonating Strike": "reaction",
   "Retreat": "reaction",
   "Ride The Wind": "action",
@@ -112,15 +146,18 @@ export const COMBAT_TRICKS: Record<string, Speed> = {
   "Rune Prison": "action",
   "Ruthless Strike": "action",
   "Salvage": "action",
+  "Satchel Charge": "action",
+  "Scorched Earth": "action",
   "Shadow": "action",
   "Shakedown": "reaction",
   "Shen, Kinkou": "reaction",
   "Shock Blast": "action",
   "Siphon Power": "reaction",
+  "Siren's Song": "reaction",
   "Sky Splitter": "action",
   "Smite": "action",
-  "Smoke Screen": "reaction",
   "Smoke and Mirrors": "action",
+  "Smoke Screen": "reaction",
   "Stand United": "action",
   "Star-Crossed": "reaction",
   "Stupefy": "reaction",
@@ -135,25 +172,33 @@ export const COMBAT_TRICKS: Record<string, Speed> = {
   "Void Seeker": "action",
   "Wages of Pain": "action",
   "Wind and Ghosts": "action",
+  "Wind Wall": "reaction",
   "Zed, Without a Sound": "action",
   "Zenith Blade": "action",
 };
 
 export const HIDDEN_CARDS: readonly string[] = [
+  "Ava Achiever",
   "Back Off",
+  "Bedeviling Stranger",
   "Blastcone Fae",
   "Block",
   "Bone Skewer",
   "Bushwhack",
   "Consult the Past",
+  "Demon Shade",
   "Disciple of Shen",
   "Edge of Night",
+  "Elnuk Herd",
+  "Ember Monk",
   "Emperor's Divide",
   "Evelynn, Entrancing",
   "Facebreaker",
   "Fight or Flight",
   "Fox-Fire",
   "Guards!",
+  "Guerilla Warfare",
+  "Gutter Guardian",
   "Here to Help",
   "Hidden Blade",
   "Hostile Takeover",
@@ -161,6 +206,8 @@ export const HIDDEN_CARDS: readonly string[] = [
   "Kennen, Keeper of Balance",
   "Lotus Trap",
   "Mischievous Marai",
+  "Momentary Companion",
+  "Noxus Saboteur",
   "Pakaa Cub",
   "Pyke, Dockside Butcher",
   "Pyke, Returned",
@@ -173,10 +220,13 @@ export const HIDDEN_CARDS: readonly string[] = [
   "Switcheroo",
   "Teemo, Scout",
   "Teemo, Strategist",
+  "Teemo, Swift Scout",
   "Temporal Breach",
+  "The Waters' Wage",
   "Tideturner",
   "Tornado Warrior",
   "Wages of Pain",
+  "Windsinger",
   "Zhonya's Hourglass",
 ];
 
