@@ -7,7 +7,7 @@ import {
   startEvent,
   submitResult,
 } from "@/lib/domain/event-machine";
-import { disputedCount, myMatch, roundProgress } from "@/lib/domain/my-match";
+import { disputedCount, headToHead, myMatch, roundProgress } from "@/lib/domain/my-match";
 import type { NexusEvent } from "@/lib/domain/types";
 
 function running(playerCount: number): NexusEvent {
@@ -75,5 +75,26 @@ describe("myMatch", () => {
     const bye = round.pairings.find((p) => p.b === null)!;
     expect(myMatch(e, bye.a)?.kind).toBe("bye");
     expect(roundProgress(round)).toEqual({ done: 0, total: 2 });
+  });
+});
+
+describe("headToHead", () => {
+  it("counts confirmed results from each side, ignoring others and cancelled nights", () => {
+    let e = running(4);
+    const pairing = currentRound(e)!.pairings[0]!;
+    const [a, b] = [pairing.a, pairing.b!];
+    expect(headToHead([e], a, b)).toEqual({ wins: 0, losses: 0, draws: 0, matches: 0 });
+
+    e = unwrap(submitResult(e, pairing.id, a, { a: 2, b: 1 })).event;
+    // Reported but not confirmed: not a result yet.
+    expect(headToHead([e], a, b).matches).toBe(0);
+    e = unwrap(confirmResult(e, pairing.id, b)).event;
+
+    expect(headToHead([e], a, b)).toEqual({ wins: 1, losses: 0, draws: 0, matches: 1 });
+    expect(headToHead([e], b, a)).toEqual({ wins: 0, losses: 1, draws: 0, matches: 1 });
+    // Someone they didn't play.
+    const other = currentRound(e)!.pairings.find((p) => p.a !== a && p.a !== b)?.a ?? "nobody";
+    expect(headToHead([e], a, other).matches).toBe(0);
+    expect(headToHead([{ ...e, status: "cancelled" }], a, b).matches).toBe(0);
   });
 });

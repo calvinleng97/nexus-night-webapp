@@ -45,6 +45,30 @@ export interface Deck {
   /** Exactly what was pasted, kept so the original is never lost. */
   source: string;
   createdAt: string;
+  /**
+   * Which version of the list this is, counting from 1. A new version starts
+   * only when the cards change; renaming a deck doesn't make one. Absent on
+   * decks saved before versions existed, which are version 1.
+   */
+  version?: number;
+  /** When the current version was saved; absent means `createdAt`. */
+  revisedAt?: string;
+  /** Earlier versions of the list, oldest first. Absent means none. */
+  history?: DeckRevision[];
+}
+
+/** A past version of a deck's list, kept so its record still means something. */
+export interface DeckRevision {
+  version: number;
+  /** When this version was saved. */
+  savedAt: string;
+  legend: string | null;
+  champions: DeckCard[];
+  mainDeck: DeckCard[];
+  battlefields: DeckCard[];
+  runes: DeckCard[];
+  sideboard: DeckCard[];
+  source: string;
 }
 
 export interface DeckCard {
@@ -78,6 +102,8 @@ export interface RegisteredDeck {
    */
   source: string;
   registeredAt: string;
+  /** Which version of the deck was registered; absent means 1. */
+  version?: number;
 }
 
 export type EventStatus = "draft" | "running" | "complete" | "cancelled";

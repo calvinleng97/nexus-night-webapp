@@ -22,6 +22,8 @@ export interface DeckOuting {
   /** When it happened: the scheduled date if the event has one, else created. */
   at: string;
   status: EventStatus;
+  /** The deck version registered that night (1 for decks without versions). */
+  version: number;
   wins: number;
   losses: number;
   draws: number;
@@ -148,6 +150,7 @@ export function leagueDeckHistory(
         eventName: event.name,
         at,
         status: event.status,
+        version: player.deck.version ?? 1,
         ...record,
       };
 

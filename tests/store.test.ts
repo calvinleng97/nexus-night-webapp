@@ -315,6 +315,32 @@ describe("file store round-trip", () => {
     expect(await repo.getDeck(deck.id)).toEqual(edited);
   });
 
+  it("starts a new version only when the cards change, and snapshots carry it", async () => {
+    const owner = await makeUser("sub-deck-ver", "DeckVersioner");
+    const deck = await repo.createDeck({
+      ownerId: owner.id,
+      name: "Azir",
+      source: "Legend:\n1 Azir, Emperor of the Sands\n\nMainDeck:\n3 Arise!\n",
+    });
+    expect(deck.version ?? 1).toBe(1);
+    expect(snapshotDeck(deck).version).toBe(1);
+
+    // Rename, same cards: still version 1, no history.
+    const renamed = await repo.updateDeck(deck.id, owner.id, { name: "Azir sentinels", source: deck.source });
+    expect(renamed.version ?? 1).toBe(1);
+    expect(renamed.history ?? []).toHaveLength(0);
+
+    // Change the cards: version 2, with v1 filed away.
+    const v2 = await repo.updateDeck(deck.id, owner.id, {
+      name: "Azir sentinels",
+      source: "Legend:\n1 Azir, Emperor of the Sands\n\nMainDeck:\n2 Arise!\n1 Defy\n",
+    });
+    expect(v2.version).toBe(2);
+    expect(v2.history?.map((h) => h.version)).toEqual([1]);
+    expect(v2.history?.[0]?.mainDeck).toEqual([{ count: 3, name: "Arise!" }]);
+    expect(snapshotDeck(v2).version).toBe(2);
+  });
+
   it("only lets the owner delete a deck", async () => {
     const owner = await makeUser("sub-deck-own", "DeckKeeper");
     const thief = await makeUser("sub-deck-thief", "DeckThief");

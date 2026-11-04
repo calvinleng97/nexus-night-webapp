@@ -1,12 +1,23 @@
 import Link from "next/link";
 import { MIN_PLAYERS, activePlayers, currentRound } from "@/lib/domain/event-machine";
-import { disputedCount, myMatch, roundProgress, type MyMatch, type Seen } from "@/lib/domain/my-match";
+import { cardTotal } from "@/lib/domain/deck";
+import {
+  disputedCount,
+  headToHead,
+  myMatch,
+  roundProgress,
+  type MyMatch,
+  type Seen,
+} from "@/lib/domain/my-match";
+import { deckWatchlist } from "@/lib/domain/tricks";
 import { computeStandings, recordLabel } from "@/lib/domain/standings";
 import { cardImage } from "@/lib/domain/card-images";
-import type { Deck, NexusEvent, UserId } from "@/lib/domain/types";
-import { listDecksForUser } from "@/lib/store/repo";
+import type { Deck, NexusEvent, RegisteredDeck, Standing, UserId } from "@/lib/domain/types";
+import { listDecksForUser, listEventsForLeague } from "@/lib/store/repo";
 import { ActionForm } from "@/components/action-form";
+import { DeckArt, WatchGallery } from "@/components/deck-gallery";
 import { DeckPicker, type PickableDeck } from "@/components/deck-picker";
+import { CardLink } from "@/components/deck-view";
 import { MatchList, MatchRow, StandingsTable, type WhoFn } from "@/components/event-bits";
 import { ScorePad } from "@/components/score-select";
 import { Avatar, Card, Empty, LinkButton, Pill, Section, Stat } from "@/components/ui";
@@ -155,7 +166,78 @@ function Verdict({ score, className = "" }: { score: Seen; className?: string })
   );
 }
 
-function MatchHero({ event, m, who }: { event: NexusEvent; m: MyMatch; who: WhoFn }) {
+/** What a player gets to know about tonight's opponent. */
+type Scouting = {
+  deck: RegisteredDeck | null;
+  h2h: { wins: number; losses: number; draws: number; matches: number };
+  tonight: Standing | null;
+};
+
+/**
+ * The opponent at a glance, before you sit down: the Legend they're on, how
+ * you've done against them, how their night is going, and — one tap away —
+ * the combat tricks and Hidden cards to play around.
+ */
+function ScoutingReport({ eventId, scout }: { eventId: string; scout: Scouting }) {
+  const { deck, h2h, tonight } = scout;
+  const watch = deck ? deckWatchlist(deck) : { tricks: [], hidden: [] };
+  const tricks = cardTotal(watch.tricks);
+  const hidden = cardTotal(watch.hidden);
+  const h2hTone = h2h.wins > h2h.losses ? "win" : h2h.wins < h2h.losses ? "loss" : "neutral";
+  return (
+    <div className="mt-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <Pill tone={h2h.matches === 0 ? "neutral" : h2hTone}>
+          {h2h.matches === 0 ? (
+            "First meeting"
+          ) : (
+            <>
+              Head-to-head
+              <span className="font-mono tabular-nums">
+                {h2h.wins}–{h2h.losses}
+                {h2h.draws > 0 ? `–${h2h.draws}` : ""}
+              </span>
+            </>
+          )}
+        </Pill>
+        {tonight ? (
+          <Pill>
+            Tonight <span className="font-mono tabular-nums text-fg">{recordLabel(tonight)}</span>
+          </Pill>
+        ) : null}
+      </div>
+      {tricks + hidden > 0 && deck ? (
+        <details className="group mt-4">
+          <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 text-sm font-medium text-fg-dim transition-colors hover:text-fg group-open:text-accent">
+            Their {tricks} combat {tricks === 1 ? "trick" : "tricks"} · {hidden} Hidden
+            <svg aria-hidden viewBox="0 0 16 16" className="size-3.5 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 6l4 4 4-4" />
+            </svg>
+          </summary>
+          {/* Inside a closed <details>, so the art loads only when opened. */}
+          <div className="mt-3 rounded-xl border border-accent/20 bg-ink/50 p-3">
+            <WatchGallery tricks={watch.tricks} hidden={watch.hidden} />
+            <Link href={`/events/${eventId}/players`} className="mt-3 inline-block text-sm text-fg-dim hover:text-fg">
+              Full list →
+            </Link>
+          </div>
+        </details>
+      ) : null}
+    </div>
+  );
+}
+
+function MatchHero({
+  event,
+  m,
+  who,
+  scout,
+}: {
+  event: NexusEvent;
+  m: MyMatch;
+  who: WhoFn;
+  scout: Scouting | null;
+}) {
   const common = { eventId: event.id, pairingId: m.pairing.id };
   const round = (
     <div className="flex items-center gap-2">
@@ -216,17 +298,28 @@ function MatchHero({ event, m, who }: { event: NexusEvent; m: MyMatch; who: WhoF
     }
   })();
 
+  const legend = scout?.deck?.legend ?? null;
   return (
-    <Card tone="accent" className="p-5">
-      {round}
-      <div className="mt-4 flex items-center gap-3.5">
-        <Avatar name={opp.name} image={opp.image} size="lg" />
-        <div className="min-w-0">
-          <p className="text-sm text-fg-dim">vs</p>
-          <p className="truncate text-2xl font-bold leading-tight tracking-tight">{opp.name}</p>
+    <Card tone="accent" className="overflow-hidden">
+      {/* Their Legend's art: what you're up against, before reading a word. */}
+      {legend ? <DeckArt legend={legend} className="h-28 sm:h-36" sizes="(min-width: 768px) 720px, 100vw" /> : null}
+      <div className={`relative p-5 ${legend ? "-mt-14 pt-0" : ""}`}>
+        {round}
+        <div className="mt-3 flex items-center gap-3.5">
+          <Avatar name={opp.name} image={opp.image} size="lg" />
+          <div className="min-w-0">
+            <p className="text-sm text-fg-dim">vs</p>
+            <p className="truncate text-2xl font-bold leading-tight tracking-tight">{opp.name}</p>
+            {legend ? (
+              <p className="truncate text-sm text-accent">
+                <CardLink name={legend} legend />
+              </p>
+            ) : null}
+          </div>
         </div>
+        {scout ? <ScoutingReport eventId={event.id} scout={scout} /> : null}
+        <div className="mt-6">{body}</div>
       </div>
-      <div className="mt-6">{body}</div>
     </Card>
   );
 }
@@ -250,6 +343,15 @@ async function Live({ userId, event, who, legendOf, myPlayer, isPlayer, isManage
   const disputes = isManager ? disputedCount(event) : 0;
   const dropped = myPlayer?.droppedAfterRound != null;
   const decks = isPlayer && !dropped ? await listDecksForUser(userId) : [];
+  // Scouting needs the league's past nights for the head-to-head.
+  const scout: Scouting | null =
+    m && m.kind !== "bye"
+      ? {
+          deck: event.players.find((p) => p.userId === m.opponent)?.deck ?? null,
+          h2h: headToHead(await listEventsForLeague(event.leagueId), userId, m.opponent),
+          tonight: standings.find((s) => s.userId === m.opponent) ?? null,
+        }
+      : null;
 
   return (
     <div>
@@ -266,7 +368,7 @@ async function Live({ userId, event, who, legendOf, myPlayer, isPlayer, isManage
       ) : null}
 
       {m ? (
-        <MatchHero event={event} m={m} who={who} />
+        <MatchHero event={event} m={m} who={who} scout={scout} />
       ) : (
         <div className="flex">
           <Pill>{dropped ? "Dropped" : "Spectating"}</Pill>

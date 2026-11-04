@@ -72,3 +72,32 @@ export function disputedCount(event: NexusEvent): number {
   const round = currentRound(event);
   return round ? round.pairings.filter((p) => p.status === "disputed").length : 0;
 }
+
+/**
+ * Your record against one opponent across a set of events (say, a league):
+ * confirmed matches only, byes and unfinished matches left out. Cancelled
+ * events count for nothing, as everywhere else.
+ */
+export function headToHead(
+  events: NexusEvent[],
+  me: UserId,
+  them: UserId,
+): { wins: number; losses: number; draws: number; matches: number } {
+  const out = { wins: 0, losses: 0, draws: 0, matches: 0 };
+  for (const event of events) {
+    if (event.status === "cancelled") continue;
+    for (const round of event.rounds)
+      for (const p of round.pairings) {
+        if (p.status !== "confirmed" || !p.report || p.b === null) continue;
+        const iAmA = p.a === me && p.b === them;
+        const iAmB = p.b === me && p.a === them;
+        if (!iAmA && !iAmB) continue;
+        const { mine, theirs } = seenFrom(p.report.score, iAmA);
+        out.matches += 1;
+        if (mine > theirs) out.wins += 1;
+        else if (mine < theirs) out.losses += 1;
+        else out.draws += 1;
+      }
+  }
+  return out;
+}
