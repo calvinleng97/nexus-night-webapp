@@ -9,7 +9,7 @@ import {
 } from "@/lib/domain/league-decks";
 import { formatDay } from "@/lib/domain/schedule";
 import { getLeague, getUsers, listEventsForLeague } from "@/lib/store/repo";
-import { DeckDisclosure } from "@/components/deck-view";
+import { CardLink, DeckDisclosure } from "@/components/deck-view";
 import {
   Badge,
   Card,
@@ -78,7 +78,9 @@ export default async function LeagueDecksPage(props: PageProps<"/leagues/[id]/de
                   <tbody>
                     {legends.map((l) => (
                       <tr key={l.legend} className="border-b border-hair-soft last:border-0">
-                        <td className="py-2.5 pl-4 pr-2 text-accent">{l.legend}</td>
+                        <td className="py-2.5 pl-4 pr-2 text-accent">
+                          <CardLink name={l.legend} />
+                        </td>
                         <td className="py-2.5 pr-2 text-right font-mono tabular-nums text-fg-dim">
                           {l.players}
                         </td>
@@ -117,7 +119,9 @@ export default async function LeagueDecksPage(props: PageProps<"/leagues/[id]/de
                     <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                       <p className="font-medium">{deck.name}</p>
                       {deck.legend && deck.legend !== deck.name ? (
-                        <p className="text-sm text-accent">{deck.legend}</p>
+                        <p className="text-sm text-accent">
+                          <CardLink name={deck.legend} />
+                        </p>
                       ) : null}
                       <span className="ml-auto font-mono text-sm tabular-nums text-fg-dim">
                         {record(deck)}

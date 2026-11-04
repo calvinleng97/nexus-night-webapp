@@ -246,6 +246,19 @@ export function snapshotDeck(
   };
 }
 
+/**
+ * The League wiki keeps every Riftbound card under the `Riftbound:` title,
+ * spaces as underscores, commas and apostrophes left alone:
+ * "Master Yi, Meditative" lives at `Riftbound:Master_Yi,_Meditative`.
+ */
+export function cardWikiUrl(name: string): string {
+  const slug = name.trim().replace(/\s+/g, "_");
+  return `https://wiki.leagueoflegends.com/en-us/Riftbound:${encodeURIComponent(slug).replaceAll(
+    "%2C",
+    ",",
+  )}`;
+}
+
 /** Render a deck back out as plain text, so a list can be copied elsewhere. */
 export function decklistText(deck: DeckLike): string {
   const parts: string[] = [];

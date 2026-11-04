@@ -1,4 +1,5 @@
 import type { Round, UserId } from "@/lib/domain/types";
+import { CardLink } from "./deck-view";
 
 /**
  * Round-by-round bracket.
@@ -51,9 +52,10 @@ export function Bracket({
                             {nameOf(p.a)}
                           </span>
                           {legendOf(p.a) ? (
-                            <span className="block truncate text-[0.7rem] text-fg-faint">
-                              {legendOf(p.a)}
-                            </span>
+                            <CardLink
+                              name={legendOf(p.a)!}
+                              className="block truncate text-[0.7rem] text-fg-faint"
+                            />
                           ) : null}
                         </span>
                         <span className="text-[0.7rem] uppercase tracking-wide text-fg-faint">
@@ -79,12 +81,10 @@ export function Bracket({
                         {nameOf(id)}
                       </span>
                       {legendOf(id) ? (
-                        <span
-                          title={legendOf(id) ?? undefined}
+                        <CardLink
+                          name={legendOf(id)!}
                           className="block truncate text-[0.7rem] text-fg-faint"
-                        >
-                          {legendOf(id)}
-                        </span>
+                        />
                       ) : null}
                     </span>
                     <span

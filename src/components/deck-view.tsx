@@ -1,4 +1,4 @@
-import { cardTotal, deckSections, hasCardList } from "@/lib/domain/deck";
+import { cardTotal, cardWikiUrl, deckSections, hasCardList } from "@/lib/domain/deck";
 import type { DeckCard } from "@/lib/domain/types";
 import { MicroLabel } from "./ui";
 
@@ -16,6 +16,30 @@ export interface DeckLike {
   sideboard: DeckCard[];
 }
 
+/**
+ * A card name linked to its League wiki entry, opening in a new tab so a
+ * mid-tournament lookup never costs anyone the page they were on.
+ */
+export function CardLink({
+  name,
+  className = "",
+}: {
+  name: string;
+  className?: string;
+}) {
+  return (
+    <a
+      href={cardWikiUrl(name)}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={`${name} — League wiki`}
+      className={`underline-offset-2 transition-colors hover:text-accent hover:underline ${className}`}
+    >
+      {name}
+    </a>
+  );
+}
+
 function Section({ label, cards }: { label: string; cards: DeckCard[] }) {
   return (
     <div>
@@ -29,7 +53,7 @@ function Section({ label, cards }: { label: string; cards: DeckCard[] }) {
         {cards.map((c, i) => (
           <li key={`${c.name}-${i}`} className="flex gap-2">
             <span className="w-5 shrink-0 text-right tabular-nums text-fg-faint">{c.count}</span>
-            <span className="min-w-0 break-words text-fg">{c.name}</span>
+            <CardLink name={c.name} className="min-w-0 break-words text-fg" />
           </li>
         ))}
       </ul>
@@ -52,7 +76,9 @@ export function DeckListing({ deck }: { deck: DeckLike }) {
       {deck.legend ? (
         <div className="mb-4 border-b border-hair-soft pb-3">
           <MicroLabel>Legend</MicroLabel>
-          <p className="mt-1 text-sm font-medium text-accent">{deck.legend}</p>
+          <p className="mt-1 text-sm font-medium text-accent">
+            <CardLink name={deck.legend} />
+          </p>
         </div>
       ) : null}
       <div className="grid gap-5 sm:grid-cols-2">

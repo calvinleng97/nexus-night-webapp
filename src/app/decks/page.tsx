@@ -2,8 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUserId } from "@/lib/auth";
 import { listDecksForUser } from "@/lib/store/repo";
+import { decklistText } from "@/lib/domain/deck";
 import { ActionForm } from "@/components/action-form";
-import { DeckDisclosure } from "@/components/deck-view";
+import { CopyButton } from "@/components/copy-button";
+import { CardLink, DeckDisclosure } from "@/components/deck-view";
 import { Card, Empty, Field, PageTitle, SectionHead, inputClass } from "@/components/ui";
 import { addDeckAction, deleteDeckAction } from "../actions";
 
@@ -100,19 +102,28 @@ export default async function DecksPage(props: PageProps<"/decks">) {
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{d.name}</p>
                   {d.legend && d.legend !== d.name ? (
-                    <p className="mt-1 text-sm text-accent">{d.legend}</p>
+                    <p className="mt-1 text-sm text-accent">
+                      <CardLink name={d.legend} />
+                    </p>
                   ) : !d.legend ? (
                     <p className="mt-1 text-sm text-fg-faint">No Legend in this list</p>
                   ) : null}
                 </div>
-                <ActionForm
-                  action={deleteDeckAction}
-                  fields={{ deckId: d.id }}
-                  label="Delete"
-                  variant="danger"
-                  confirm="Confirm delete"
-                  compact
-                />
+                <div className="flex shrink-0 items-start gap-2">
+                  <CopyButton
+                    text={decklistText(d)}
+                    label="Copy list"
+                    title="Copy the decklist to import back into RiftAtlas"
+                  />
+                  <ActionForm
+                    action={deleteDeckAction}
+                    fields={{ deckId: d.id }}
+                    label="Delete"
+                    variant="danger"
+                    confirm="Confirm delete"
+                    compact
+                  />
+                </div>
               </div>
               <div className="mt-3">
                 <DeckDisclosure deck={d} label="Full list" />
