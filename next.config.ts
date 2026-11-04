@@ -11,8 +11,10 @@ const config: NextConfig = {
     remotePatterns: [new URL("https://wiki.leagueoflegends.com/en-us/images/**")],
     qualities: [75],
     formats: ["image/webp"],
-    // A printed card never changes, so a resized copy is good for a month.
-    minimumCacheTTL: 60 * 60 * 24 * 30,
+    // Fetched from the wiki once per size, then served from .next/cache/images
+    // (which `next build` keeps). A printed card never changes, so the copy is
+    // good for a year — this also becomes the browser's Cache-Control max-age.
+    minimumCacheTTL: 60 * 60 * 24 * 365,
   },
 };
 
