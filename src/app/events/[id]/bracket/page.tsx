@@ -198,8 +198,7 @@ export default async function EventBracketPage(props: PageProps<"/events/[id]/br
               <tr className="border-b border-hair text-left text-xs uppercase tracking-wide text-fg-faint">
                 <th className="w-10 py-2.5 pl-4 pr-2 font-medium">#</th>
                 <th className="py-2.5 pr-2 font-medium">Player</th>
-                <th className="py-2.5 pr-2 text-right font-medium">Pts</th>
-                <th className="py-2.5 pr-4 text-right font-medium">W–L</th>
+                <th className="py-2.5 pr-4 text-right font-medium">W–L–T</th>
               </tr>
             </thead>
             <tbody>
@@ -229,9 +228,6 @@ export default async function EventBracketPage(props: PageProps<"/events/[id]/br
                         <Badge>bye</Badge>
                       </span>
                     ) : null}
-                  </td>
-                  <td className="py-2.5 pr-2 text-right font-mono tabular-nums">
-                    {s.matchPoints}
                   </td>
                   <td className="py-2.5 pr-4 text-right font-mono tabular-nums text-fg-dim">
                     {recordLabel(s)}

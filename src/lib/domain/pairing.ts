@@ -24,13 +24,13 @@
  * A second bye outranks everything in both modes, which is always satisfiable
  * for n >= 3. Next comes the bye going to the worst record: it is a hard rule,
  * not a cost, so the solver only chooses among eligible players tied for the
- * lowest match points and never hands the bye to a better record to keep
+ * lowest record and never hands the bye to a better record to keep
  * groups even.
  */
 
 export interface PairingPlayer {
   userId: string;
-  matchPoints: number;
+  weight: number;
   /** User ids this player has already played (byes excluded). */
   opponents: string[];
   /** Byes already received in this event. */
@@ -38,7 +38,7 @@ export interface PairingPlayer {
 }
 
 /**
- * - `record`: pair strictly within records. Players on equal match points are
+ * - `record`: pair strictly within records. Players on equal records are
  *   matched whenever the group sizes allow, accepting a rematch if that is what
  *   keeping records together requires.
  * - `avoid-rematch`: never repeat a pairing unless the field makes it
@@ -61,7 +61,7 @@ export interface PairingOutcome {
   warnings: string[];
   /** True when an exact optimum was proven, false when a heuristic was used. */
   exact: boolean;
-  /** Sum of squared match-point gaps across the chosen pairs. */
+  /** Sum of squared record-weight gaps across the chosen pairs. */
   recordGap: number;
 }
 
@@ -85,8 +85,8 @@ interface Scales {
 function scalesFor(players: PairingPlayer[], priority: PairingPriority): Scales {
   const m = players.length;
   const pairsBound = Math.floor(m / 2) + 1;
-  const pts = players.map((p) => p.matchPoints);
-  const maxGap = pts.length > 0 ? Math.max(...pts) - Math.min(...pts) : 0;
+  const weights = players.map((p) => p.weight);
+  const maxGap = weights.length > 0 ? Math.max(...weights) - Math.min(...weights) : 0;
   const maxGapSq = Math.max(1, maxGap * maxGap);
 
   let gap: number;
@@ -121,13 +121,13 @@ function mulberry32(seed: number): () => number {
 }
 
 /**
- * Stable standings order: match points descending, then by seeded shuffle so
+ * Stable standings order: best record first, then by seeded shuffle so
  * that equal records have a deterministic but unbiased order.
  */
 export function standingsOrder(players: PairingPlayer[], seed: number): PairingPlayer[] {
   const rand = mulberry32(seed);
   const keyed = players.map((p) => ({ p, k: rand() }));
-  keyed.sort((x, y) => y.p.matchPoints - x.p.matchPoints || x.k - y.k);
+  keyed.sort((x, y) => y.p.weight - x.p.weight || x.k - y.k);
   return keyed.map((e) => e.p);
 }
 
@@ -148,7 +148,7 @@ function buildCostMatrix(
     for (let j = i + 1; j < m; j++) {
       const pi = players[i]!;
       const pj = players[j]!;
-      const d = pi.matchPoints - pj.matchPoints;
+      const d = pi.weight - pj.weight;
       let c = d * d * scales.gap;
       if (met.has(`${pi.userId}\u0000${pj.userId}`)) c += scales.rematch;
       cost[i * m + j] = c;
@@ -295,7 +295,7 @@ export function pairRound(
   const ordered = standingsOrder(players, seed);
   const met = metSet(players);
   const isRematch = (a: string, b: string) => met.has(`${a}\u0000${b}`);
-  const pointsOf = new Map(players.map((p) => [p.userId, p.matchPoints]));
+  const pointsOf = new Map(players.map((p) => [p.userId, p.weight]));
   const gapOf = (a: string, b: string) => {
     const d = (pointsOf.get(a) ?? 0) - (pointsOf.get(b) ?? 0);
     return d * d;
@@ -356,8 +356,8 @@ export function pairRound(
   // players tied on that record does the matching cost pick who takes it (with
   // standings position as the final tiebreak). For large fields only consider
   // the bottom few candidates to bound the work.
-  const worstPoints = Math.min(...candidatePool.map((p) => p.matchPoints));
-  const fromBottom = candidatePool.filter((p) => p.matchPoints === worstPoints).reverse();
+  const worstWeight = Math.min(...candidatePool.map((p) => p.weight));
+  const fromBottom = candidatePool.filter((p) => p.weight === worstWeight).reverse();
   const candidates = ordered.length > EXACT_LIMIT ? fromBottom.slice(0, 4) : fromBottom;
 
   let best: { pairs: Array<{ a: string; b: string; rematch: boolean }>; bye: string; cost: number; exact: boolean } | null =

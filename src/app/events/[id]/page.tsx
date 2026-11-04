@@ -28,19 +28,18 @@ export default async function EventRegistrationPage(props: PageProps<"/events/[i
 
   return (
     <div className="space-y-3">
-      {/* Am I in? Once joined, the join control becomes a green card. */}
-      {isPlayer && !dropped ? (
+      {/* Am I in? While sign-ups are open, Join swaps for a same-size Leave. */}
+      {open && isPlayer ? (
+        <ActionForm
+          action={leaveEventAction}
+          fields={{ eventId: event.id }}
+          label="Leave this event"
+          variant="solidDanger"
+          size="lg"
+        />
+      ) : isPlayer && !dropped ? (
         <Card tone="win" className="flex items-center gap-3 p-4 pl-5">
           <p className="min-w-0 flex-1 font-semibold text-win">✓ You&apos;re in</p>
-          {open ? (
-            <ActionForm
-              action={leaveEventAction}
-              fields={{ eventId: event.id }}
-              label="Leave"
-              variant="danger"
-              compact
-            />
-          ) : null}
         </Card>
       ) : open ? (
         <ActionForm

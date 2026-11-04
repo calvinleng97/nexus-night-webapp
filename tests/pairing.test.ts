@@ -10,7 +10,7 @@ import {
 const WIN = 3;
 
 function player(id: string, pts = 0, opponents: string[] = [], byes = 0): PairingPlayer {
-  return { userId: id, matchPoints: pts, opponents, byes };
+  return { userId: id, weight: pts, opponents, byes };
 }
 
 /** Walk a whole event, choosing winners with `pick`, and report what happened. */
@@ -138,7 +138,7 @@ describe("record gap is minimal per round", () => {
       const pool = out.bye ? ordered.filter((p) => p.userId !== out.bye) : ordered;
       let fold = 0;
       for (let i = 0; i + 1 < pool.length; i += 2) {
-        const d = pool[i]!.matchPoints - pool[i + 1]!.matchPoints;
+        const d = pool[i]!.weight - pool[i + 1]!.weight;
         fold += d * d;
       }
       expect(out.recordGap).toBeLessThanOrEqual(fold);
@@ -263,7 +263,7 @@ describe("bye selection", () => {
     const players = [player("w1", 3, []), player("w2", 3, []), player("l1", 0, []), player("l2", 0, [])];
     const out = pairRound(players, { seed: 11 });
     expect(out.recordGap).toBe(0);
-    const byId = new Map(players.map((p) => [p.userId, p.matchPoints]));
+    const byId = new Map(players.map((p) => [p.userId, p.weight]));
     for (const pr of out.pairs) expect(byId.get(pr.a)).toBe(byId.get(pr.b));
   });
 

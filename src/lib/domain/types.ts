@@ -180,7 +180,6 @@ export interface NexusEvent {
 /** Derived, never stored: computed from an event's confirmed results. */
 export interface Standing {
   userId: UserId;
-  matchPoints: number;
   wins: number;
   losses: number;
   draws: number;
@@ -189,8 +188,7 @@ export interface Standing {
   gamesLost: number;
   opponents: UserId[];
   dropped: boolean;
-  /** Shared rank: players on equal match points share a rank number. */
+  /** Shared rank: players on equal records share a rank number. */
   rank: number;
 }
 
-export const MATCH_POINTS = { win: 3, draw: 1, loss: 0 } as const;

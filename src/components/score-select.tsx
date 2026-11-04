@@ -2,6 +2,8 @@
 export const SCORE_OPTIONS = [
   { value: "2-0", label: "I won 2-0" },
   { value: "2-1", label: "I won 2-1" },
+  { value: "1-0", label: "I won 1-0 (time)" },
+  { value: "0-1", label: "I lost 0-1 (time)" },
   { value: "1-2", label: "I lost 1-2" },
   { value: "0-2", label: "I lost 0-2" },
   { value: "1-1", label: "Draw 1-1 (time)" },
@@ -32,7 +34,9 @@ export function ManagerScoreSelect({ aName, bName }: { aName: string; bName: str
   const options = [
     { value: "2-0", label: `${aName} 2-0` },
     { value: "2-1", label: `${aName} 2-1` },
+    { value: "1-0", label: `${aName} 1-0` },
     { value: "1-1", label: "Draw 1-1" },
+    { value: "0-1", label: `${bName} 1-0` },
     { value: "1-2", label: `${bName} 2-1` },
     { value: "0-2", label: `${bName} 2-0` },
   ];

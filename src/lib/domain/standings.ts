@@ -1,4 +1,4 @@
-import { MATCH_POINTS, type NexusEvent, type Pairing, type Standing, type UserId } from "./types";
+import { type NexusEvent, type Pairing, type Standing, type UserId } from "./types";
 import type { PairingPlayer } from "./pairing";
 
 /** Outcome of a single pairing from one player's perspective. */
@@ -20,9 +20,17 @@ function outcomeFor(p: Pairing, side: Side): "win" | "loss" | "draw" | "bye" | n
 }
 
 /**
- * Standings are records only — match points, W/L/D, games, byes. No
- * tiebreakers are computed and no champion is declared: players on equal
- * match points share a rank. Every underlying game score is kept on disk, so
+ * Sort key for a record, used only to order standings and feed Swiss pairing.
+ * Never shown: events report records, not points. A bye counts as a win.
+ */
+export function recordWeight(s: Pick<Standing, "wins" | "draws" | "byes">): number {
+  return 3 * (s.wins + s.byes) + s.draws;
+}
+
+/**
+ * Standings are records only — W/L/T, games, byes. No tiebreakers are
+ * computed and no champion is declared: players on equal records share a
+ * rank. Every underlying game score is kept on disk, so
  * tiebreakers like opponent match-win % remain computable later from the data.
  */
 export function computeStandings(event: NexusEvent): Standing[] {
@@ -30,7 +38,6 @@ export function computeStandings(event: NexusEvent): Standing[] {
   for (const pl of event.players) {
     base.set(pl.userId, {
       userId: pl.userId,
-      matchPoints: 0,
       wins: 0,
       losses: 0,
       draws: 0,
@@ -53,7 +60,6 @@ export function computeStandings(event: NexusEvent): Standing[] {
         if (res === null) continue;
         if (res === "bye") {
           s.byes += 1;
-          s.matchPoints += MATCH_POINTS.win;
           continue;
         }
         const opp = side === "a" ? p.b : p.a;
@@ -64,36 +70,30 @@ export function computeStandings(event: NexusEvent): Standing[] {
           s.gamesWon += own;
           s.gamesLost += other;
         }
-        if (res === "win") {
-          s.wins += 1;
-          s.matchPoints += MATCH_POINTS.win;
-        } else if (res === "loss") {
-          s.losses += 1;
-          s.matchPoints += MATCH_POINTS.loss;
-        } else {
-          s.draws += 1;
-          s.matchPoints += MATCH_POINTS.draw;
-        }
+        if (res === "win") s.wins += 1;
+        else if (res === "loss") s.losses += 1;
+        else s.draws += 1;
       }
     }
   }
 
-  // Stable display order: match points desc, then join order (not a tiebreak,
+  // Stable display order: best record first, then join order (not a tiebreak,
   // just a deterministic way to print equal records).
   const joinOrder = new Map(event.players.map((p, i) => [p.userId, i]));
   const rows = [...base.values()].sort(
     (x, y) =>
-      y.matchPoints - x.matchPoints ||
+      recordWeight(y) - recordWeight(x) ||
       (joinOrder.get(x.userId) ?? 0) - (joinOrder.get(y.userId) ?? 0),
   );
 
-  // Shared ranks: equal match points get the same rank number.
+  // Shared ranks: equal records get the same rank number.
   let rank = 0;
-  let prevPoints: number | null = null;
+  let prev: number | null = null;
   rows.forEach((row, i) => {
-    if (prevPoints === null || row.matchPoints !== prevPoints) {
+    const weight = recordWeight(row);
+    if (prev === null || weight !== prev) {
       rank = i + 1;
-      prevPoints = row.matchPoints;
+      prev = weight;
     }
     row.rank = rank;
   });
@@ -115,13 +115,14 @@ export function toPairingPlayers(event: NexusEvent, standings: Standing[]): Pair
       const s = byId.get(p.userId);
       return {
         userId: p.userId,
-        matchPoints: s?.matchPoints ?? 0,
+        weight: s ? recordWeight(s) : 0,
         opponents: s?.opponents ?? [],
         byes: s?.byes ?? 0,
       };
     });
 }
 
-export function recordLabel(s: Standing): string {
-  return s.draws > 0 ? `${s.wins}-${s.losses}-${s.draws}` : `${s.wins}-${s.losses}`;
+/** Wins-losses-ties, always all three. */
+export function recordLabel(s: Pick<Standing, "wins" | "losses" | "draws">): string {
+  return `${s.wins}-${s.losses}-${s.draws}`;
 }

@@ -189,7 +189,7 @@ function printStandings(event: NexusEvent, who: (id: UserId) => string) {
     const bye = s.byes > 0 ? ` bye×${s.byes}` : "";
     console.log(
       `   ${String(s.rank).padStart(2)}. ${who(s.userId).padEnd(8)} ` +
-        `${String(s.matchPoints).padStart(2)} pts  ${recordLabel(s).padEnd(6)} ` +
+        `${recordLabel(s).padEnd(6)} ` +
         `games ${s.gamesWon}-${s.gamesLost}${bye}`,
     );
   }
