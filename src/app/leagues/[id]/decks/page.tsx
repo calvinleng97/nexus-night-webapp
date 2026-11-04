@@ -79,7 +79,7 @@ export default async function LeagueDecksPage(props: PageProps<"/leagues/[id]/de
                     {legends.map((l) => (
                       <tr key={l.legend} className="border-b border-hair-soft last:border-0">
                         <td className="py-2.5 pl-4 pr-2 text-accent">
-                          <CardLink name={l.legend} />
+                          <CardLink name={l.legend} legend />
                         </td>
                         <td className="py-2.5 pr-2 text-right font-mono tabular-nums text-fg-dim">
                           {l.players}
@@ -120,7 +120,7 @@ export default async function LeagueDecksPage(props: PageProps<"/leagues/[id]/de
                       <p className="font-medium">{deck.name}</p>
                       {deck.legend && deck.legend !== deck.name ? (
                         <p className="text-sm text-accent">
-                          <CardLink name={deck.legend} />
+                          <CardLink name={deck.legend} legend />
                         </p>
                       ) : null}
                       <span className="ml-auto font-mono text-sm tabular-nums text-fg-dim">

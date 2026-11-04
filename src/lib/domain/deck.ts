@@ -250,9 +250,15 @@ export function snapshotDeck(
  * The League wiki keeps every Riftbound card under the `Riftbound:` title,
  * spaces as underscores, commas and apostrophes left alone:
  * "Master Yi, Meditative" lives at `Riftbound:Master_Yi,_Meditative`.
+ *
+ * Legends are the exception: the wiki files them under their title alone, so
+ * "Jinx, Loose Cannon" lives at `Riftbound:Loose_Cannon`.
  */
-export function cardWikiUrl(name: string): string {
-  const slug = name.trim().replace(/\s+/g, "_");
+export function cardWikiUrl(name: string, { legend = false }: { legend?: boolean } = {}): string {
+  const trimmed = name.trim();
+  const comma = trimmed.indexOf(",");
+  const title = legend && comma >= 0 ? trimmed.slice(comma + 1).trim() || trimmed : trimmed;
+  const slug = title.replace(/\s+/g, "_");
   return `https://wiki.leagueoflegends.com/en-us/Riftbound:${encodeURIComponent(slug).replaceAll(
     "%2C",
     ",",

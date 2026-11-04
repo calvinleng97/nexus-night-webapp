@@ -103,7 +103,7 @@ export default async function DecksPage(props: PageProps<"/decks">) {
                   <p className="truncate font-medium">{d.name}</p>
                   {d.legend && d.legend !== d.name ? (
                     <p className="mt-1 text-sm text-accent">
-                      <CardLink name={d.legend} />
+                      <CardLink name={d.legend} legend />
                     </p>
                   ) : !d.legend ? (
                     <p className="mt-1 text-sm text-fg-faint">No Legend in this list</p>
