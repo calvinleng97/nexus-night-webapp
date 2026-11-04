@@ -23,7 +23,11 @@ export default async function LeaguesPage(props: PageProps<"/leagues">) {
 
   const [leagues, events] = await Promise.all([listLeagues(), listAllEvents()]);
   const eventCount = new Map<string, number>();
-  for (const e of events) eventCount.set(e.leagueId, (eventCount.get(e.leagueId) ?? 0) + 1);
+  // Cancelled events are gone as far as the count is concerned.
+  for (const e of events) {
+    if (e.status === "cancelled") continue;
+    eventCount.set(e.leagueId, (eventCount.get(e.leagueId) ?? 0) + 1);
+  }
 
   // Leagues you are not in are not listed: a join code is the only way in.
   const mine = leagues.filter((l) => l.memberIds.includes(userId));
