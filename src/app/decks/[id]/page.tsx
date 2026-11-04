@@ -62,9 +62,14 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
             <RuneSplit runes={deck.runes} />
             <span className="flex-1" />
             {editing ? null : (
-              <LinkButton href={`/decks/${deck.id}?edit=1`} size="sm" variant="primary">
-                Edit
-              </LinkButton>
+              <>
+                <LinkButton href={`/decks/${deck.id}/build`} size="sm" variant="primary">
+                  Edit
+                </LinkButton>
+                <LinkButton href={`/decks/${deck.id}?edit=1`} size="sm" variant="ghost">
+                  Edit text
+                </LinkButton>
+              </>
             )}
             <CopyButton
               text={decklistText(deck)}
@@ -87,7 +92,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
       {editing ? (
         <Card className="mt-4 p-5">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-[1.05rem] font-semibold">Edit deck</h2>
+            <h2 className="text-[1.05rem] font-semibold">Edit as text</h2>
             <Link href={`/decks/${deck.id}`} className="text-sm text-fg-dim hover:text-fg">
               Cancel
             </Link>

@@ -40,9 +40,14 @@ export default async function DecksPage(props: PageProps<"/decks">) {
         title="My decks"
         action={
           adding ? null : (
-            <LinkButton href="/decks?new=1" variant="primary" size="sm">
-              + Add deck
-            </LinkButton>
+            <span className="flex gap-2">
+              <LinkButton href="/decks?new=1" variant="default" size="sm">
+                Paste
+              </LinkButton>
+              <LinkButton href="/decks/build" variant="solid" size="sm">
+                + Build
+              </LinkButton>
+            </span>
           )
         }
       />
@@ -84,9 +89,14 @@ export default async function DecksPage(props: PageProps<"/decks">) {
       {decks.length === 0 && !adding ? (
         <Empty
           action={
-            <LinkButton href="/decks?new=1" variant="solid">
-              + Add your first deck
-            </LinkButton>
+            <span className="flex flex-wrap justify-center gap-2">
+              <LinkButton href="/decks/build" variant="solid">
+                + Build a deck
+              </LinkButton>
+              <LinkButton href="/decks?new=1" variant="default">
+                Paste a list
+              </LinkButton>
+            </span>
           }
         >
           No decks yet.
