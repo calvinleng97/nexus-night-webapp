@@ -216,8 +216,7 @@ export function ExpandIcon() {
 }
 
 /**
- * A collapsed full list, opened from a small icon button. `label` is only for
- * screen readers. Decks whose cards were never recorded show nothing.
+ * A collapsed full list, opened from a small labelled button. Decks whose cards were never recorded show nothing.
  */
 export function DeckDisclosure({
   deck,
@@ -229,9 +228,11 @@ export function DeckDisclosure({
   if (!hasCardList(deck)) return null;
   return (
     <details className="group">
-      <summary className="inline-flex cursor-pointer list-none" title={label}>
-        <span className="sr-only">{label}</span>
-        <ExpandIcon />
+      <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-lg border border-hair bg-raised px-2.5 py-1 text-xs font-medium text-fg-dim transition-colors hover:text-fg group-open:border-accent/40 group-open:text-accent">
+        {label}
+        <svg aria-hidden viewBox="0 0 16 16" className="size-3 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 6l4 4 4-4" />
+        </svg>
       </summary>
       <div className="mt-2.5">
         <DeckListing deck={deck} />

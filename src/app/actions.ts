@@ -106,7 +106,7 @@ export async function rotateJoinCodeAction(
     const leagueId = str(form, "leagueId");
     await rotateJoinCode(leagueId, userId);
     revalidatePath(`/leagues/${leagueId}`, "layout");
-    return { ok: true, warnings: ["The old code no longer works."] };
+    return { ok: true };
   });
 }
 
@@ -234,6 +234,7 @@ export async function joinEventAction(_prev: ActionState, form: FormData): Promi
     const eventId = str(form, "eventId");
     await joinEvent(eventId, userId);
     revalidatePath(`/events/${eventId}`, "layout");
+    revalidatePath("/leagues");
     return { ok: true };
   });
 }
@@ -244,6 +245,7 @@ export async function leaveEventAction(_prev: ActionState, form: FormData): Prom
     const eventId = str(form, "eventId");
     await leaveEvent(eventId, userId);
     revalidatePath(`/events/${eventId}`, "layout");
+    revalidatePath("/leagues");
     return { ok: true };
   });
 }

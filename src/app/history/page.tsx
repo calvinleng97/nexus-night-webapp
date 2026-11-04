@@ -2,16 +2,32 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUserId } from "@/lib/auth";
 import { matchHistory, recordString, summarize } from "@/lib/domain/history";
-import type { UserId } from "@/lib/domain/types";
+import type { ReactNode } from "react";
+import { hasCardList, shortLegend } from "@/lib/domain/deck";
+import { leagueDeckHistory } from "@/lib/domain/league-decks";
+import { recordLabel } from "@/lib/domain/standings";
+import type { RegisteredDeck, UserId } from "@/lib/domain/types";
+import { DeckListing } from "@/components/deck-view";
 import { getUsers, listEventsForUser } from "@/lib/store/repo";
-import { Badge, Card, Empty, PageTitle, Score, SectionHead, Stat, Tag } from "@/components/ui";
+import {
+  Avatar,
+  Card,
+  Chevron,
+  Empty,
+  LinkButton,
+  PageHeader,
+  Pill,
+  Score,
+  Section,
+  Stat,
+  WinRate,
+  thClass,
+} from "@/components/ui";
 
-const RESULT_TONE = {
-  win: "win",
-  loss: "loss",
-  draw: "draw",
-  bye: "accent",
-  pending: "neutral",
+const RESULT = {
+  win: { letter: "W", cls: "bg-win/15 text-win" },
+  loss: { letter: "L", cls: "bg-loss/15 text-loss" },
+  draw: { letter: "D", cls: "bg-draw/15 text-draw" },
 } as const;
 
 export default async function HistoryPage() {
@@ -30,13 +46,15 @@ export default async function HistoryPage() {
   if (entries.length === 0)
     return (
       <div>
-        <PageTitle>History</PageTitle>
-        <Empty>
-          No matches yet. Join an event from{" "}
-          <Link href="/leagues" className="text-fg-dim underline hover:text-fg">
-            your leagues
-          </Link>
-          .
+        <PageHeader title="History" />
+        <Empty
+          action={
+            <LinkButton href="/leagues" variant="primary">
+              Find an event
+            </LinkButton>
+          }
+        >
+          No matches yet.
         </Empty>
       </div>
     );
@@ -49,78 +67,210 @@ export default async function HistoryPage() {
     else byEvent.push({ id: e.eventId, name: e.eventName, rows: [e] });
   }
 
+  const winRate = totals.matches > 0 ? Math.round((totals.wins / totals.matches) * 100) : null;
+
+  // What everyone brought, per event: the snapshots the events kept.
+  const decksAt = new Map(
+    events.map((e) => [e.id, new Map(e.players.map((p) => [p.userId, p.deck]))]),
+  );
+  const deckOf = (eventId: string, uid: UserId | null): RegisteredDeck | null =>
+    uid ? (decksAt.get(eventId)?.get(uid) ?? null) : null;
+  // Same aggregation the league Decks tab uses, here across every league.
+  const myDecks = leagueDeckHistory(events).find((h) => h.userId === userId)?.decks ?? [];
+
   return (
     <div>
-      <PageTitle>History</PageTitle>
+      <PageHeader title="History" />
 
-      <div className="mb-9 grid grid-cols-2 gap-2 sm:grid-cols-5">
-        <Stat label="Match record" value={recordString(totals)} />
-        <Stat label="Games" value={`${totals.gamesWon}–${totals.gamesLost}`} />
+      <div className="grid grid-cols-3 gap-2">
+        <Stat label="Record" value={recordString(totals)} />
         <Stat
           label="Win rate"
-          value={totals.matches > 0 ? `${Math.round((totals.wins / totals.matches) * 100)}%` : "—"}
+          value={winRate === null ? "—" : `${winRate}%`}
+          footer={<WinRate size="tile" rate={winRate === null ? null : winRate / 100} />}
         />
-        <Stat label="Matches" value={String(totals.matches)} />
-        <Stat label="Events" value={String(totals.events)} />
+        <Stat label="Games" value={`${totals.gamesWon}–${totals.gamesLost}`} />
       </div>
 
-      {byEvent.map((group) => {
-        const played = group.rows.filter((r) => r.result !== "pending" && r.result !== "bye");
-        const wins = played.filter((r) => r.result === "win").length;
-        const draws = played.filter((r) => r.result === "draw").length;
-        const losses = played.length - wins - draws;
-        return (
-          <div key={group.id} className="mb-7">
-            <SectionHead
-              action={
-                <span className="font-mono text-xs tabular-nums text-fg-faint">
-                  {recordString({ wins, losses, draws })}
-                </span>
-              }
-            >
-              <Link href={`/events/${group.id}`} className="hover:text-fg-dim">
-                {group.name}
-              </Link>
-            </SectionHead>
+      {myDecks.length > 0 ? (
+        <Section title="By deck" count={myDecks.length}>
+          <Card className="overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-hair-soft text-left">
+                  <th className={`${thClass} pl-4 pr-2`}>Deck</th>
+                  <th className={`${thClass} pr-2 text-right`}>Nights</th>
+                  <th className={`${thClass} pr-2 text-right`}>Record</th>
+                  <th className={`${thClass} pr-4 text-right`}>Win rate</th>
+                </tr>
+              </thead>
+              <tbody>
+                {myDecks.map((d) => {
+                  const rounds = d.wins + d.losses + d.draws;
+                  const wr = rounds > 0 ? d.wins / rounds : null;
+                  return (
+                    <tr key={d.deckId} className="border-b border-hair-soft last:border-0">
+                      <td className="py-2.5 pl-4 pr-2">
+                        <span className="block truncate font-medium">{d.name}</span>
+                        {d.legend && d.legend !== d.name ? (
+                          <span className="block truncate text-xs text-fg-faint">{shortLegend(d.legend)}</span>
+                        ) : null}
+                      </td>
+                      <td className="py-2.5 pr-2 text-right font-mono tabular-nums text-fg-dim">{d.outings.length}</td>
+                      <td className="py-2.5 pr-2 text-right font-mono tabular-nums text-fg-dim">{recordLabel(d)}</td>
+                      <td className="py-2.5 pr-4">
+                        <WinRate rate={wr} className="ml-auto" />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </Card>
+        </Section>
+      ) : null}
 
-            <Card className="overflow-hidden">
-              <ul className="divide-y divide-hair-soft">
-                {[...group.rows]
-                  .sort((a, b) => a.roundNumber - b.roundNumber)
-                  .map((r) => (
-                    <li key={`${r.eventId}-${r.roundNumber}`} className="flex items-center gap-3 px-4 py-3">
-                      <span className="w-7 shrink-0 font-mono text-xs text-fg-faint">
-                        R{r.roundNumber}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-sm">
-                        {r.result === "bye" ? (
-                          <span className="text-fg-faint">Bye</span>
+      <Section title="Nights" count={byEvent.length}>
+        <div className="space-y-4">
+          {byEvent.map((group) => {
+            const played = group.rows.filter((r) => r.result !== "pending" && r.result !== "bye");
+            const wins = played.filter((r) => r.result === "win").length;
+            const draws = played.filter((r) => r.result === "draw").length;
+            const losses = played.length - wins - draws;
+            const mine = deckOf(group.id, userId);
+            return (
+              <Card key={group.id} className="overflow-hidden">
+                <Link
+                  href={`/events/${group.id}`}
+                  className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-raised"
+                >
+                  <span className="min-w-0 flex-1 truncate font-semibold">{group.name}</span>
+                  <span
+                    className={`rounded-lg px-2.5 py-1 font-mono text-base font-bold tabular-nums ${
+                      wins > losses
+                        ? "bg-win/15 text-win"
+                        : wins < losses
+                          ? "bg-loss/15 text-loss"
+                          : "bg-draw/15 text-draw"
+                    }`}
+                  >
+                    {recordString({ wins, losses, draws })}
+                  </span>
+                  <Chevron />
+                </Link>
+
+                {/* The deck you brought, opening to its list. */}
+                <DeckRow
+                  deck={mine}
+                  lead={<span className="w-7 shrink-0 text-xs font-semibold text-accent">You</span>}
+                  title={mine ? mine.name : "No deck"}
+                  subtitle={mine?.legend && mine.legend !== mine.name ? shortLegend(mine.legend) : null}
+                  tone="mine"
+                />
+
+                <ul className="divide-y divide-hair-soft border-t border-hair-soft">
+                  {[...group.rows]
+                    .sort((a, b) => a.roundNumber - b.roundNumber)
+                    .map((r) => {
+                      const theirs = deckOf(r.eventId, r.opponentId);
+                      const result =
+                        r.result === "pending" ? (
+                          <Pill size="sm">In progress</Pill>
+                        ) : r.result === "bye" ? (
+                          <Pill size="sm" tone="accent">
+                            Free win
+                          </Pill>
                         ) : (
                           <>
-                            <span className="text-fg-faint">vs </span>
-                            {nameOf(r.opponentId)}
+                            <Score mine={r.mine} theirs={r.theirs} />
+                            <span
+                              className={`inline-flex size-6 items-center justify-center rounded-md text-xs font-bold ${RESULT[r.result].cls}`}
+                            >
+                              {RESULT[r.result].letter}
+                            </span>
                           </>
-                        )}
-                      </span>
-                      {r.result === "pending" ? (
-                        <Tag>Not reported</Tag>
-                      ) : r.result === "bye" ? (
-                        <Badge tone="accent">bye</Badge>
-                      ) : (
-                        <>
-                          <Score mine={r.mine} theirs={r.theirs} />
-                          <Badge tone={RESULT_TONE[r.result]}>
-                            {r.result === "win" ? "W" : r.result === "loss" ? "L" : "D"}
-                          </Badge>
-                        </>
-                      )}
-                    </li>
-                  ))}
-              </ul>
-            </Card>
-          </div>
-        );
-      })}
+                        );
+                      return (
+                        <li key={`${r.eventId}-${r.roundNumber}`}>
+                          <DeckRow
+                            deck={r.result === "bye" ? null : theirs}
+                            lead={
+                              <>
+                                <span className="w-7 shrink-0 font-mono text-xs text-fg-faint">
+                                  R{r.roundNumber}
+                                </span>
+                                {r.result === "bye" ? null : (
+                                  <Avatar
+                                    name={nameOf(r.opponentId)}
+                                    image={r.opponentId ? users.get(r.opponentId)?.image : null}
+                                    size="xs"
+                                  />
+                                )}
+                              </>
+                            }
+                            title={r.result === "bye" ? "Bye" : nameOf(r.opponentId)}
+                            subtitle={theirs && r.result !== "bye" ? (shortLegend(theirs.legend) ?? theirs.name) : null}
+                            trailing={result}
+                          />
+                        </li>
+                      );
+                    })}
+                </ul>
+              </Card>
+            );
+          })}
+        </div>
+      </Section>
     </div>
+  );
+}
+
+/**
+ * A row that names a deck and, when its cards were kept, opens to the full
+ * list — the opponent's, so you can see what beat you, or your own.
+ */
+function DeckRow({
+  deck,
+  lead,
+  title,
+  subtitle,
+  trailing,
+  tone,
+}: {
+  deck: RegisteredDeck | null;
+  lead: ReactNode;
+  title: string;
+  subtitle: string | null;
+  trailing?: ReactNode;
+  tone?: "mine";
+}) {
+  const row = (open: boolean) => (
+    <>
+      {lead}
+      <span className="min-w-0 flex-1">
+        <span className={`block truncate text-sm ${tone === "mine" ? "font-medium" : ""}`}>{title}</span>
+        {subtitle ? <span className="block truncate text-xs text-fg-faint">{subtitle}</span> : null}
+      </span>
+      {trailing}
+      {open ? (
+        <svg aria-hidden viewBox="0 0 16 16" className="size-4 shrink-0 text-fg-faint transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 6l4 4 4-4" />
+        </svg>
+      ) : (
+        <span className="size-4 shrink-0" />
+      )}
+    </>
+  );
+  const cls = `flex items-center gap-3 px-4 py-2.5 ${tone === "mine" ? "bg-accent/[0.05]" : ""}`;
+  if (!deck || !hasCardList(deck)) return <div className={cls}>{row(false)}</div>;
+  return (
+    <details className="group">
+      <summary className={`${cls} cursor-pointer list-none transition-colors hover:bg-raised`}>
+        {row(true)}
+      </summary>
+      <div className="px-4 pb-4 pt-1">
+        <DeckListing deck={deck} />
+      </div>
+    </details>
   );
 }

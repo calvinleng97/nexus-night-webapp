@@ -1,6 +1,6 @@
 import { setEventDateAction } from "@/app/actions";
 import { ActionForm } from "./action-form";
-import { MicroLabel } from "./ui";
+import { inputClass } from "./ui";
 
 /** Manager control for scheduling or rescheduling an event. */
 export function EventDateControl({
@@ -11,22 +11,19 @@ export function EventDateControl({
   value: string | null;
 }) {
   return (
-    <div>
-      <MicroLabel>{value ? "Reschedule" : "Set a date"}</MicroLabel>
-      <ActionForm
-        action={setEventDateAction}
-        fields={{ eventId }}
-        label="Save date"
-        compact
-        className="mt-2"
-      >
-        <input
-          type="datetime-local"
-          name="scheduledFor"
-          defaultValue={value ?? ""}
-          className="mb-2 w-full rounded-xl border border-hair bg-ink px-3 py-2 text-sm text-fg outline-none focus:border-accent/50 sm:w-auto"
-        />
-      </ActionForm>
-    </div>
+    <ActionForm
+      action={setEventDateAction}
+      fields={{ eventId }}
+      label="Save"
+      className="flex flex-wrap items-center gap-2 [&>p]:basis-full [&>ul]:basis-full"
+    >
+      <input
+        type="datetime-local"
+        name="scheduledFor"
+        aria-label="Date and time"
+        defaultValue={value ?? ""}
+        className={`${inputClass} h-10 min-w-0 flex-1 !py-0`}
+      />
+    </ActionForm>
   );
 }
