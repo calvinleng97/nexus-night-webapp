@@ -53,6 +53,7 @@ export function Bracket({
                           </span>
                           {legendOf(p.a) ? (
                             <CardLink
+                              legend
                               name={legendOf(p.a)!}
                               className="block truncate text-[0.7rem] text-fg-faint"
                             />
@@ -82,6 +83,7 @@ export function Bracket({
                       </span>
                       {legendOf(id) ? (
                         <CardLink
+                          legend
                           name={legendOf(id)!}
                           className="block truncate text-[0.7rem] text-fg-faint"
                         />

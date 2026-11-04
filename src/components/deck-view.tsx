@@ -22,14 +22,17 @@ export interface DeckLike {
  */
 export function CardLink({
   name,
+  legend = false,
   className = "",
 }: {
   name: string;
+  /** Legends sit on the wiki under their title alone, not "Champion, Title". */
+  legend?: boolean;
   className?: string;
 }) {
   return (
     <a
-      href={cardWikiUrl(name)}
+      href={cardWikiUrl(name, { legend })}
       target="_blank"
       rel="noopener noreferrer"
       title={`${name} — League wiki`}
@@ -77,7 +80,7 @@ export function DeckListing({ deck }: { deck: DeckLike }) {
         <div className="mb-4 border-b border-hair-soft pb-3">
           <MicroLabel>Legend</MicroLabel>
           <p className="mt-1 text-sm font-medium text-accent">
-            <CardLink name={deck.legend} />
+            <CardLink name={deck.legend} legend />
           </p>
         </div>
       ) : null}

@@ -253,6 +253,12 @@ describe("wiki links", () => {
     );
   });
 
+  it("files legends under their title alone", () => {
+    expect(cardWikiUrl("Jinx, Loose Cannon", { legend: true })).toBe(
+      "https://wiki.leagueoflegends.com/en-us/Riftbound:Loose_Cannon",
+    );
+  });
+
   it("encodes characters a URL path cannot carry", () => {
     expect(cardWikiUrl("What?")).toBe(
       "https://wiki.leagueoflegends.com/en-us/Riftbound:What%3F",
