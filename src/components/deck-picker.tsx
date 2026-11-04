@@ -33,6 +33,10 @@ export function DeckPicker({
     ) : (
       <ActionForm action={registerDeckAction} fields={{ eventId }} label="Save" variant="primary" compact>
         <select
+          // React resets the form after the action, which would put the select
+          // back to the default it mounted with. Remounting on the saved deck
+          // makes that default the one just registered.
+          key={current?.deckId ?? ""}
           name="deckId"
           defaultValue={current?.deckId ?? ""}
           className="mb-2 w-full rounded-xl border border-hair bg-ink px-3 py-2 text-sm text-fg outline-none focus:border-accent/50"
