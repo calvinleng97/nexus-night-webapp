@@ -130,9 +130,18 @@ npx tsx scripts/demo.ts 7         # play a full night and print every step
 npx tsx scripts/seed-history.ts   # seed finished events so History/Elo have data
 npx tsx scripts/seed-history.ts --events=5 --players=10 --skill=-1
 npx tsx scripts/live-event.ts     # park an event mid-round to inspect player views
-npm run sync:cards                # refresh the card list from the League wiki
+npm run sync:cards                # refresh card images + card data from the League wiki
 npm run preheat:cards             # fetch and resize every card on a running server
 ```
+
+**Deck editor.** `/decks/build` (and **Edit** on a deck) builds a deck from
+card art: pick a Legend, and the pool narrows to its domains and its
+champion's Signature cards; tap cards to add them while counters check the
+40-card main deck (Chosen Champion included), 3 Battlefields, 12 Runes, a
+sideboard of up to 10 and 3 copies a card. The checks never block saving.
+Card details (type, domains, cost, Might, tags, rarity, banned) live in
+`src/lib/domain/card-pool.json`, read from each wiki page's info box by
+`npm run sync:cards`.
 
 **Card images.** Decklists show card art (with a text List view), each card
 readable on hover or a tap. `src/lib/domain/card-images.json` maps each wiki
