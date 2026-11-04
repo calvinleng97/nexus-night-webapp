@@ -6,7 +6,7 @@ import { decklistText } from "@/lib/domain/deck";
 import { ActionForm } from "@/components/action-form";
 import { CopyButton } from "@/components/copy-button";
 import { CardLink, DeckDisclosure } from "@/components/deck-view";
-import { Card, Empty, Field, PageTitle, SectionHead, inputClass } from "@/components/ui";
+import { Card, Empty, Field, LinkButton, PageHeader, inputClass } from "@/components/ui";
 import { addDeckAction, deleteDeckAction } from "../actions";
 
 const PLACEHOLDER = `Legend:
@@ -36,36 +36,27 @@ export default async function DecksPage(props: PageProps<"/decks">) {
 
   return (
     <div>
-      <PageTitle>My decks</PageTitle>
-
-      <SectionHead
-        count={decks.length}
+      <PageHeader
+        title="My decks"
         action={
           adding ? null : (
-            <Link
-              href="/decks?new=1"
-              aria-label="Add a deck"
-              title="Add a deck"
-              className="inline-flex size-7 items-center justify-center rounded-lg border border-hair bg-raised text-base leading-none text-fg-dim transition-colors hover:border-accent/40 hover:text-accent"
-            >
-              <span aria-hidden>+</span>
-            </Link>
+            <LinkButton href="/decks?new=1" variant="primary" size="sm">
+              + Add deck
+            </LinkButton>
           )
         }
-      >
-        Saved
-      </SectionHead>
+      />
 
       {adding ? (
-        <Card className="mb-3 p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-medium">Paste a decklist</h3>
-            <Link href="/decks" className="px-1 text-sm text-fg-faint hover:text-fg">
+        <Card className="mb-6 p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-[1.05rem] font-semibold">Paste a decklist</h3>
+            <Link href="/decks" className="text-sm text-fg-dim hover:text-fg">
               Cancel
             </Link>
           </div>
-          <ActionForm action={addDeckAction} label="Save deck" variant="primary">
-            <div className="mb-3 space-y-3">
+          <ActionForm action={addDeckAction} label="Save deck" variant="solid" size="lg">
+            <div className="mb-4 space-y-4">
               <Field label="Name">
                 <input
                   name="name"
@@ -91,37 +82,44 @@ export default async function DecksPage(props: PageProps<"/decks">) {
       ) : null}
 
       {decks.length === 0 && !adding ? (
-        <Empty>
-          No decks yet — tap <span className="text-fg-dim">+</span> and paste one from RiftAtlas.
+        <Empty
+          action={
+            <LinkButton href="/decks?new=1" variant="solid">
+              + Add your first deck
+            </LinkButton>
+          }
+        >
+          No decks yet.
         </Empty>
       ) : (
-        <ul className="space-y-2.5">
+        <ul className="space-y-3">
           {decks.map((d) => (
             <Card as="li" key={d.id} className="p-4">
               <div className="flex flex-wrap items-start gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{d.name}</p>
+                  <p className="truncate text-[1.05rem] font-semibold">{d.name}</p>
                   {d.legend && d.legend !== d.name ? (
                     <p className="mt-1 text-sm text-accent">
                       <CardLink name={d.legend} legend />
                     </p>
                   ) : !d.legend ? (
-                    <p className="mt-1 text-sm text-fg-faint">No Legend in this list</p>
+                    <p className="mt-1 text-sm text-fg-faint">No Legend</p>
                   ) : null}
                 </div>
                 <div className="flex shrink-0 items-start gap-2">
                   <CopyButton
                     text={decklistText(d)}
-                    label="Copy list"
+                    className="!h-8 !rounded-lg !px-3 !text-[0.8rem]"
+                    label="Copy"
                     title="Copy the decklist to import back into RiftAtlas"
                   />
                   <ActionForm
                     action={deleteDeckAction}
                     fields={{ deckId: d.id }}
                     label="Delete"
-                    variant="danger"
-                    confirm="Confirm delete"
-                    compact
+                    variant="ghost"
+                    size="sm"
+                    confirm="Delete?"
                   />
                 </div>
               </div>

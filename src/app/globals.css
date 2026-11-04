@@ -2,17 +2,18 @@
 
 @theme {
   /* Near-black base with a hint of warmth; surfaces step up, not out. */
-  --color-ink: #0a0a0c;
-  --color-surface: #121215;
-  --color-raised: #18181d;
-  --color-hair: #232329;
-  --color-hair-soft: #1c1c22;
+  --color-ink: #0b0b0e;
+  --color-surface: #131317;
+  --color-raised: #1b1b21;
+  --color-hover: #22222a;
+  --color-hair: #26262e;
+  --color-hair-soft: #1d1d23;
 
-  --color-fg: #ededf1;
-  --color-fg-dim: #a1a1ac;
-  --color-fg-faint: #6b6b76;
+  --color-fg: #f0f0f4;
+  --color-fg-dim: #a8a8b4;
+  --color-fg-faint: #75757f;
 
-  --color-accent: #d3b575;
+  --color-accent: #d9bb7a;
   --color-accent-soft: #3a3020;
 
   --color-win: #5fd68c;
@@ -21,10 +22,27 @@
 
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+
+  --animate-pulse-dot: pulse-dot 1.8s ease-in-out infinite;
+
+  @keyframes pulse-dot {
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.45;
+      transform: scale(0.8);
+    }
+  }
 }
 
 html {
   color-scheme: dark;
+  /* Reserve the scrollbar's room, so a page growing tall enough to need one
+     (opening a decklist) doesn't shove everything sideways. */
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -33,6 +51,7 @@ body {
   font-family: var(--font-sans);
   -webkit-text-size-adjust: 100%;
   -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Comfortable tap targets on a phone at a table. */
@@ -45,22 +64,27 @@ body {
 }
 
 /* Quiet, consistent focus ring. */
-:where(a, button, select, input):focus-visible {
+:where(a, button, select, input, textarea, summary):focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
-/* Horizontal scrollers (the bracket) without a visible chrome scrollbar. */
-.scroll-x {
+summary::-webkit-details-marker {
+  display: none;
+}
+
+/* Room for the phone tab bar, including the home-indicator inset. */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Scrolls sideways when it must, never shows a scrollbar doing it. */
+.no-scrollbar {
   overflow-x: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-hair) transparent;
+  overflow-y: hidden;
+  scrollbar-width: none;
 }
-.scroll-x::-webkit-scrollbar {
-  height: 6px;
-}
-.scroll-x::-webkit-scrollbar-thumb {
-  background: var(--color-hair);
-  border-radius: 999px;
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }

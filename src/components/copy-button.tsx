@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { btn } from "./ui";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /**
  * Copies `text` to the clipboard and confirms with a brief label swap.
@@ -16,8 +17,8 @@ export function CopyButton({
   className = "",
 }: {
   text: string;
-  label: string;
-  copiedLabel?: string;
+  label: ReactNode;
+  copiedLabel?: ReactNode;
   title?: string;
   className?: string;
 }) {
@@ -53,11 +54,7 @@ export function CopyButton({
       type="button"
       onClick={copy}
       title={title}
-      className={`inline-flex items-center justify-center gap-2 rounded-xl border px-3.5 py-2 text-sm font-medium transition-colors ${
-        copied
-          ? "border-win/40 bg-win/10 text-win"
-          : "border-hair bg-raised text-fg hover:border-accent/40"
-      } ${className}`}
+      className={`${btn(copied ? "default" : "default", "md")} ${copied ? "!border-win/40 !bg-win/10 !text-win" : ""} ${className}`}
     >
       {copied ? copiedLabel : label}
     </button>

@@ -1,62 +1,83 @@
+"use client";
+
 import Link from "next/link";
+import { useActionState } from "react";
+import { EMPTY_STATE } from "@/app/action-state";
 import { registerDeckAction } from "@/app/actions";
-import type { Deck, RegisteredDeck } from "@/lib/domain/types";
-import { ActionForm } from "./action-form";
-import { Card, MicroLabel } from "./ui";
+import { ActionMessages } from "./action-form";
+import { btn } from "./ui";
+
+export type PickableDeck = { id: string; name: string; legend: string | null };
 
 /**
- * Lets a player attach one of their saved decks to this event.
- *
- * `bare` drops the card and label, for when a surrounding card already says
- * what this is.
+ * The player's saved decks as a list to tap: the registered one is checked.
+ * One tap registers; tapping the registered one again clears it.
  */
 export function DeckPicker({
   eventId,
   decks,
-  current,
-  bare = false,
+  currentId,
 }: {
   eventId: string;
-  decks: Deck[];
-  current: RegisteredDeck | null;
-  bare?: boolean;
+  decks: PickableDeck[];
+  currentId: string | null;
 }) {
-  const body =
-    decks.length === 0 ? (
-      <p className="text-sm text-fg-dim">
-        You have no saved decks.{" "}
-        <Link href="/decks" className="text-accent underline underline-offset-2">
-          Add one
-        </Link>{" "}
-        to register it here.
-      </p>
-    ) : (
-      <ActionForm action={registerDeckAction} fields={{ eventId }} label="Save" variant="primary" compact>
-        <select
-          // React resets the form after the action, which would put the select
-          // back to the default it mounted with. Remounting on the saved deck
-          // makes that default the one just registered.
-          key={current?.deckId ?? ""}
-          name="deckId"
-          defaultValue={current?.deckId ?? ""}
-          className="mb-2 w-full rounded-xl border border-hair bg-ink px-3 py-2 text-sm text-fg outline-none focus:border-accent/50"
-        >
-          <option value="">No deck registered</option>
-          {decks.map((d) => (
-            <option key={d.id} value={d.id}>
-              {/* A deck named after its Legend should not say it twice. */}
-              {d.legend && d.legend !== d.name ? `${d.name} — ${d.legend}` : d.name}
-            </option>
-          ))}
-        </select>
-      </ActionForm>
+  const [state, formAction, pending] = useActionState(registerDeckAction, EMPTY_STATE);
+
+  if (decks.length === 0)
+    return (
+      <Link href="/decks?new=1" className={btn("default", "md", true)}>
+        + Add a deck
+      </Link>
     );
 
-  if (bare) return body;
   return (
-    <Card className="p-4">
-      <MicroLabel>Your deck</MicroLabel>
-      <div className="mt-3">{body}</div>
-    </Card>
+    <div>
+      <ul className={`space-y-2 ${pending ? "opacity-60" : ""}`}>
+        {decks.map((d) => {
+          const on = d.id === currentId;
+          return (
+            <li key={d.id}>
+              <form action={formAction}>
+                <input type="hidden" name="eventId" value={eventId} />
+                <input type="hidden" name="deckId" value={on ? "" : d.id} />
+                <button
+                  type="submit"
+                  disabled={pending}
+                  aria-pressed={on}
+                  className={`flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-colors ${
+                    on
+                      ? "border-accent/60 bg-accent/10"
+                      : "border-hair bg-ink hover:border-fg-faint/50"
+                  }`}
+                >
+                  <span
+                    aria-hidden
+                    className={`flex size-5 shrink-0 items-center justify-center rounded-full border ${
+                      on ? "border-accent bg-accent text-ink" : "border-fg-faint/60"
+                    }`}
+                  >
+                    {on ? (
+                      <svg viewBox="0 0 16 16" className="size-3" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m3.5 8.5 3 3 6-7" />
+                      </svg>
+                    ) : null}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className={`block truncate font-medium ${on ? "text-accent" : ""}`}>
+                      {d.name}
+                    </span>
+                    {d.legend && d.legend !== d.name ? (
+                      <span className="block truncate text-xs text-fg-faint">{d.legend}</span>
+                    ) : null}
+                  </span>
+                </button>
+              </form>
+            </li>
+          );
+        })}
+      </ul>
+      <ActionMessages state={state} />
+    </div>
   );
 }

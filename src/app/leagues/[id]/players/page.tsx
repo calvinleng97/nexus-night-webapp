@@ -4,10 +4,15 @@ import { loadConfig } from "@/lib/config";
 import { computeLeagueElo } from "@/lib/domain/elo";
 import { getLeague, getUsers, listEventsForLeague } from "@/lib/store/repo";
 import { ActionForm } from "@/components/action-form";
-import { Badge, Card } from "@/components/ui";
+import { RowMenu } from "@/components/row-menu";
+import { Avatar, Card, Pill, WinRate, thClass } from "@/components/ui";
 import { leaveLeagueAction, removeMemberAction, setManagerAction } from "../../../actions";
 
-/** The Players tab: league ratings, plus member management for managers. */
+/**
+ * The Leaderboard tab: league ratings. It is also the member list, so a
+ * manager's per-member actions sit in a ⋯ menu on each row rather than in a
+ * second list of the same people.
+ */
 export default async function LeaguePlayersPage(props: PageProps<"/leagues/[id]/players">) {
   const { id } = await props.params;
   const userId = await currentUserId();
@@ -24,66 +29,110 @@ export default async function LeaguePlayersPage(props: PageProps<"/leagues/[id]/
   const isManager = league.managerIds.includes(userId);
   // Derived on every view from the confirmed results on disk.
   const ratings = computeLeagueElo(events, league.memberIds, loadConfig().elo);
+  const nameOf = (uid: string) => users.get(uid)?.name ?? "Unknown";
+
+  // Rated players are ranked; the rest wait for their first game.
+  let rank = 0;
+  const rows = ratings.map((r) => ({ ...r, rank: r.games > 0 ? ++rank : null }));
 
   return (
     <div>
-      <Card className="overflow-hidden">
+      {/* Not overflow-hidden: the row menus need to spill out of the card. */}
+      <Card>
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-hair text-left text-xs uppercase tracking-wide text-fg-faint">
-              <th className="py-2.5 pl-4 pr-2 font-medium">Player</th>
-              <th className="py-2.5 pr-2 text-right font-medium">Elo</th>
-              <th className="py-2.5 pr-4 text-right font-medium">W&ndash;L</th>
+            <tr className="border-b border-hair-soft text-left">
+              <th className={`${thClass} w-12 pl-4 pr-1`}>#</th>
+              <th className={`${thClass} pr-2`}>Player</th>
+              <th className={`${thClass} pr-2 text-right`}>Elo</th>
+              <th className={`${thClass} pr-2 text-right`}>Record</th>
+              <th className={`${thClass} ${isManager ? "pr-1" : "pr-4"} hidden text-right sm:table-cell`}>Win rate</th>
+              {isManager ? <th className="w-10 pr-2" /> : null}
             </tr>
           </thead>
           <tbody>
-            {ratings.map((r) => {
-              const memberIsManager = league.managerIds.includes(r.userId);
+            {rows.map((r) => {
+              const me = r.userId === userId;
               const delta = r.lastDelta;
+              const top = r.rank !== null && r.rank <= 3;
               return (
                 <tr
                   key={r.userId}
-                  className={`border-b border-hair-soft last:border-0 ${
-                    r.userId === userId ? "bg-accent/5" : ""
-                  }`}
+                  className={`border-b border-hair-soft last:border-0 ${me ? "bg-accent/[0.06]" : ""}`}
                 >
-                  <td className="py-2.5 pl-4 pr-2">
-                    <span className="flex items-center gap-1.5">
-                      {memberIsManager ? (
-                        <span aria-label="Manager" title="Manager" className="text-accent">
+                  <td
+                    className={`py-3 pl-4 pr-1 font-mono tabular-nums ${top ? "font-semibold text-accent" : "text-fg-faint"}`}
+                  >
+                    {r.rank ?? "–"}
+                  </td>
+                  <td className="py-3 pr-2">
+                    <span className="flex min-w-0 items-center gap-2.5">
+                      <Avatar name={nameOf(r.userId)} image={users.get(r.userId)?.image} />
+                      <span className={`min-w-0 truncate ${me ? "font-semibold text-accent" : ""}`}>
+                        {nameOf(r.userId)}
+                      </span>
+                      {league.managerIds.includes(r.userId) ? (
+                        <span aria-label="Manager" title={r.userId === league.createdBy ? "Owner" : "Manager"} className="text-xs text-accent">
                           ★
                         </span>
                       ) : null}
-                      <span
-                        className={`min-w-0 truncate ${
-                          r.userId === userId ? "text-accent" : ""
-                        }`}
-                      >
-                        {users.get(r.userId)?.name ?? "Unknown"}
-                      </span>
-                      {r.games === 0 ? <Badge>new</Badge> : null}
+                      {r.games === 0 ? <Pill size="sm">new</Pill> : null}
                     </span>
                   </td>
-                  <td className="py-2.5 pr-2 text-right">
-                    <span className="font-mono tabular-nums">{r.rating}</span>
+                  <td className="py-3 pr-2 text-right">
+                    <span className="font-mono font-semibold tabular-nums">{r.rating}</span>
                     {delta !== null && delta !== 0 ? (
                       <span
-                        className={`ml-1.5 font-mono text-xs tabular-nums ${
-                          delta > 0 ? "text-win" : "text-loss"
-                        }`}
+                        className={`ml-1.5 inline-block w-8 text-left font-mono text-xs tabular-nums ${delta > 0 ? "text-win" : "text-loss"}`}
                       >
                         {delta > 0 ? "▲" : "▼"}
                         {Math.abs(delta)}
                       </span>
-                    ) : null}
+                    ) : (
+                      <span className="ml-1.5 inline-block w-8" />
+                    )}
                   </td>
-                  <td className="py-2.5 pr-4 text-right font-mono tabular-nums text-fg-dim">
+                  <td className="py-3 pr-2 text-right font-mono tabular-nums text-fg-dim">
                     {r.games === 0
                       ? "—"
                       : r.draws > 0
                         ? `${r.wins}-${r.losses}-${r.draws}`
                         : `${r.wins}-${r.losses}`}
                   </td>
+                  <td className={`hidden py-3 sm:table-cell ${isManager ? "pr-1" : "pr-4"}`}>
+                    <WinRate
+                      rate={r.games > 0 ? r.wins / (r.wins + r.losses + r.draws) : null}
+                      className="ml-auto"
+                    />
+                  </td>
+                  {isManager ? (
+                    <td className="py-3 pr-2 text-right">
+                      {r.userId === league.createdBy ? null : (
+                        <RowMenu label={`Manage ${nameOf(r.userId)}`}>
+                          <ActionForm
+                            action={setManagerAction}
+                            fields={{
+                              leagueId: league.id,
+                              targetId: r.userId,
+                              make: league.managerIds.includes(r.userId) ? "0" : "1",
+                            }}
+                            label={league.managerIds.includes(r.userId) ? "Remove manager" : "Make manager"}
+                            variant="ghost"
+                            size="sm"
+                          />
+                          <ActionForm
+                            action={removeMemberAction}
+                            fields={{ leagueId: league.id, targetId: r.userId }}
+                            label="Remove from league"
+                            variant="ghost"
+                            className="[&_button]:text-loss"
+                            size="sm"
+                            confirm="Yes, remove"
+                          />
+                        </RowMenu>
+                      )}
+                    </td>
+                  ) : null}
                 </tr>
               );
             })}
@@ -91,57 +140,15 @@ export default async function LeaguePlayersPage(props: PageProps<"/leagues/[id]/
         </table>
       </Card>
 
-      {isManager ? (
-        <details className="group mt-4">
-          <summary className="cursor-pointer list-none text-sm text-fg-faint transition-colors hover:text-fg">
-            <span className="inline-block transition-transform group-open:rotate-90">▸</span>{" "}
-            Manage players
-          </summary>
-          <ul className="mt-3 divide-y divide-hair-soft">
-            {league.memberIds.map((m) => {
-              const memberIsManager = league.managerIds.includes(m);
-              if (m === league.createdBy) return null;
-              return (
-                <li key={m} className="flex flex-wrap items-center gap-2 py-2">
-                  <span className="min-w-0 flex-1 truncate text-sm">
-                    {users.get(m)?.name ?? "Unknown"}
-                  </span>
-                  {memberIsManager ? <Badge tone="accent">Manager</Badge> : null}
-                  <ActionForm
-                    action={setManagerAction}
-                    fields={{
-                      leagueId: league.id,
-                      targetId: m,
-                      make: memberIsManager ? "0" : "1",
-                    }}
-                    label={memberIsManager ? "Demote" : "Make manager"}
-                    variant="ghost"
-                    compact
-                  />
-                  <ActionForm
-                    action={removeMemberAction}
-                    fields={{ leagueId: league.id, targetId: m }}
-                    label="Remove"
-                    variant="danger"
-                    confirm="Remove from league"
-                    compact
-                  />
-                </li>
-              );
-            })}
-          </ul>
-        </details>
-      ) : null}
-
       {league.createdBy !== userId ? (
-        <div className="mt-8 border-t border-hair-soft pt-6">
+        <div className="mt-10 flex justify-center">
           <ActionForm
             action={leaveLeagueAction}
             fields={{ leagueId: league.id }}
             label="Leave league"
-            variant="danger"
-            confirm="Confirm leave"
-            compact
+            variant="ghost"
+            size="sm"
+            confirm="Leave this league?"
           />
         </div>
       ) : null}

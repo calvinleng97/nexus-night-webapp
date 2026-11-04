@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useState, type ReactNode } from "react";
+import { useActionState, useEffect, useState, type ReactNode } from "react";
 import { EMPTY_STATE, type ActionState } from "@/app/action-state";
+import { btn, type ButtonSize, type ButtonVariant } from "./ui";
 
-type Action = (prev: ActionState, form: FormData) => Promise<ActionState>;
+export type Action = (prev: ActionState, form: FormData) => Promise<ActionState>;
 
 /**
  * A form bound to a server action, with inline pending state and error
@@ -16,40 +17,27 @@ export function ActionForm({
   label,
   variant = "default",
   size = "md",
+  full,
   confirm,
   children,
   className = "",
-  compact = false,
 }: {
   action: Action;
   fields?: Record<string, string | number>;
-  label: string;
-  variant?: "default" | "primary" | "solid" | "danger" | "solidDanger" | "ghost";
-  size?: "md" | "lg";
+  label: ReactNode;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  /** Stretch the button to the form's width. Large buttons do by default. */
+  full?: boolean;
   confirm?: string;
   children?: ReactNode;
   className?: string;
-  compact?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(action, EMPTY_STATE);
   const [armed, setArmed] = useState(false);
-
-  const base =
-    "inline-flex items-center justify-center gap-2 rounded-xl border font-medium transition-colors disabled:opacity-50";
-  const sizes = {
-    md: "px-3.5 py-2 text-sm",
-    lg: "w-full px-5 py-3.5 text-[0.95rem] font-semibold",
-  } as const;
-  const variants = {
-    default: "border-hair bg-raised text-fg hover:border-accent/40",
-    primary: "border-accent/40 bg-accent/10 text-accent hover:bg-accent/20",
-    // The strongest call to action on a page: filled, dark text on gold.
-    solid: "border-accent bg-accent text-ink hover:bg-accent/90",
-    danger: "border-loss/45 bg-loss/10 text-loss hover:bg-loss/20",
-    // The filled counterpart of `solid`, for undoing it (Join → Leave).
-    solidDanger: "border-loss bg-loss text-ink hover:bg-loss/90",
-    ghost: "border-transparent text-fg-faint hover:text-fg",
-  } as const;
+  // A finished submission disarms: the confirm step is for one action, not a mode.
+  useEffect(() => setArmed(false), [state]);
+  const stretch = full ?? size === "lg";
 
   return (
     <form action={formAction} className={className}>
@@ -57,25 +45,33 @@ export function ActionForm({
         <input key={k} type="hidden" name={k} value={String(v)} />
       ))}
       {children}
-      <button
-        type={confirm && !armed ? "button" : "submit"}
-        onClick={confirm && !armed ? () => setArmed(true) : undefined}
-        disabled={pending}
-        className={`${base} ${sizes[size]} ${variants[armed ? "danger" : variant]} ${
-          compact || size === "lg" ? "" : "w-full sm:w-auto"
-        }`}
-      >
-        {pending ? "Working…" : armed ? confirm : label}
-      </button>
-      {armed ? (
+      <div className={`flex items-center gap-2 ${stretch ? "w-full" : ""}`}>
         <button
-          type="button"
-          onClick={() => setArmed(false)}
-          className="ml-2 text-xs text-fg-faint underline"
+          type={confirm && !armed ? "button" : "submit"}
+          onClick={confirm && !armed ? () => setArmed(true) : undefined}
+          disabled={pending}
+          className={`${btn(armed ? (variant === "solid" ? "solid" : "solidDanger") : variant, size, stretch)} ${stretch ? "flex-1" : ""}`}
         >
-          cancel
+          {pending ? "Working…" : armed ? confirm : label}
         </button>
-      ) : null}
+        {armed && !pending ? (
+          <button
+            type="button"
+            onClick={() => setArmed(false)}
+            className={btn("ghost", size === "lg" ? "lg" : size)}
+          >
+            Cancel
+          </button>
+        ) : null}
+      </div>
+      <ActionMessages state={state} />
+    </form>
+  );
+}
+
+export function ActionMessages({ state }: { state: ActionState }) {
+  return (
+    <>
       {state.message && !state.ok ? (
         <p role="alert" className="mt-2 text-sm text-loss">
           {state.message}
@@ -88,6 +84,6 @@ export function ActionForm({
           ))}
         </ul>
       ) : null}
-    </form>
+    </>
   );
 }
