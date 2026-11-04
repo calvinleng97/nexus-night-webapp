@@ -12,10 +12,13 @@
  * or on an ability of a unit or gear — whose effect can change how a combat
  * goes: Might up or down, damage, kills, stuns, Shield/Tank/Assault, damage
  * or death prevention, moving or bouncing units, adding units to the fight,
- * stealing a unit, or removing the Equipment a unit is wearing. Pure counters,
- * card draw, rune/energy abilities, and effects that only reach the base
- * (tokens, recursion) are left out, as are Legends' abilities: a Legend is
- * always face up on the table, so it is never a surprise.
+ * stealing a unit, or removing the Equipment a unit is wearing — and
+ * counters, including cards that take control of a spell instead (Mystic
+ * Reversal), since a counter is the other thing to play around before you
+ * commit to a fight. Card draw, rune/energy abilities, and effects that only
+ * reach the base (tokens, recursion) are left out, as are Legends'
+ * abilities: a Legend is always face up on the table, so it is never a
+ * surprise.
  *
  * Hidden cards are those with the [Hidden] keyword themselves, not cards that
  * merely refer to it. A card can be both.
@@ -26,6 +29,7 @@ import type { DeckCard } from "./types";
 export type Speed = "action" | "reaction";
 
 export const COMBAT_TRICKS: Record<string, Speed> = {
+  "Abandon": "reaction",
   "Against the Odds": "reaction",
   "Alpha Strike": "action",
   "An Offer You Can't Refuse": "action",
@@ -53,6 +57,7 @@ export const COMBAT_TRICKS: Record<string, Speed> = {
   "Convergent Mutation": "reaction",
   "Counter Strike": "reaction",
   "Crescent Strike": "action",
+  "Crumbling Sands": "reaction",
   "Danger Zone": "reaction",
   "Deathgrip": "reaction",
   "Decisive Strike": "action",
@@ -60,6 +65,7 @@ export const COMBAT_TRICKS: Record<string, Speed> = {
   "Decree of Insight": "reaction",
   "Decree of Rage": "action",
   "Defiant Dance": "reaction",
+  "Defy": "reaction",
   "Discipline": "reaction",
   "Disintegrate": "action",
   "Divining Shells": "action",
@@ -79,6 +85,7 @@ export const COMBAT_TRICKS: Record<string, Speed> = {
   "Final Spark": "action",
   "Flash": "reaction",
   "Flurry of Blades": "reaction",
+  "Flurry of Feathers": "reaction",
   "For Demacia!": "reaction",
   "Forgotten Signpost": "action",
   "Fox-Fire": "action",
@@ -90,6 +97,7 @@ export const COMBAT_TRICKS: Record<string, Speed> = {
   "Grim Resolve": "action",
   "Gust": "reaction",
   "Guttural Roar": "action",
+  "Hard Bargain": "reaction",
   "Here to Help": "action",
   "Heroic Charge": "action",
   "Hextech Ray": "action",
@@ -97,6 +105,7 @@ export const COMBAT_TRICKS: Record<string, Speed> = {
   "High Note": "reaction",
   "Highlander": "reaction",
   "Hold 'Em": "action",
+  "Hush": "reaction",
   "Imperial Decree": "action",
   "Improvised Projectile": "action",
   "Incinerate": "action",
@@ -107,6 +116,7 @@ export const COMBAT_TRICKS: Record<string, Speed> = {
   "Last Breath": "action",
   "Last Caress": "reaction",
   "Last Stand": "action",
+  "Lilting Lullaby": "reaction",
   "Lost to the Sands": "action",
   "Lotus Trap": "reaction",
   "Marching Orders": "action",
@@ -114,6 +124,8 @@ export const COMBAT_TRICKS: Record<string, Speed> = {
   "Monster Harpoon": "action",
   "Moonfall": "action",
   "Moonlight Affliction": "reaction",
+  "Mystic Reversal": "reaction",
+  "Not So Fast": "reaction",
   "Noxian Guillotine": "action",
   "Ntofo Strikes": "action",
   "One-Two Punch": "action",
@@ -123,8 +135,10 @@ export const COMBAT_TRICKS: Record<string, Speed> = {
   "Primal Strength": "action",
   "Punch First": "action",
   "Rebuke": "action",
+  "Rebuttal": "reaction",
   "Relentless Pursuit": "action",
   "Rengar, Pouncing": "reaction",
+  "Repulse": "reaction",
   "Resonating Strike": "reaction",
   "Retreat": "reaction",
   "Ride The Wind": "action",
@@ -158,6 +172,7 @@ export const COMBAT_TRICKS: Record<string, Speed> = {
   "Void Seeker": "action",
   "Wages of Pain": "action",
   "Wind and Ghosts": "action",
+  "Wind Wall": "reaction",
   "Zed, Without a Sound": "action",
   "Zenith Blade": "action",
 };

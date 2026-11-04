@@ -60,17 +60,26 @@ describe("the watchlists", () => {
     expect(legends).toEqual([]);
   });
 
-  it("puts Discipline in a real Azir list's watchlist", () => {
+  it("puts Discipline and the counters in a real Azir list's watchlist", () => {
     const { tricks } = deckWatchlist({
       mainDeck: [
         { count: 3, name: "Discipline" },
-        { count: 3, name: "Defy" }, // a counter, not a combat trick
+        { count: 3, name: "Defy" },
         { count: 1, name: "En Garde" },
+        { count: 3, name: "Doran's Shield" }, // gear with no instant effect
       ],
+      sideboard: [{ count: 1, name: "Not So Fast" }],
     });
-    expect(tricks.map((c) => [c.name, c.speed])).toEqual([
-      ["Discipline", "reaction"],
-      ["En Garde", "reaction"],
+    expect(tricks.map((c) => [c.name, c.speed, c.sideboard])).toEqual([
+      ["Discipline", "reaction", false],
+      ["Defy", "reaction", false],
+      ["En Garde", "reaction", false],
+      ["Not So Fast", "reaction", true],
     ]);
+  });
+
+  it("counts every counter, including ones that steal the spell instead", () => {
+    for (const n of ["Defy", "Wind Wall", "Hush", "Not So Fast", "Mystic Reversal", "Rebuttal", "Riposte"])
+      expect(COMBAT_TRICKS[n], n).toBe("reaction");
   });
 });
