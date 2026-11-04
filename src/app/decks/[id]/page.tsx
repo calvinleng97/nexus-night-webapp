@@ -7,20 +7,18 @@ import { recordLabel } from "@/lib/domain/standings";
 import { getDeck } from "@/lib/store/repo";
 import { ActionForm } from "@/components/action-form";
 import { CopyButton } from "@/components/copy-button";
-import { DeckArt, DeckGallery, RuneSplit } from "@/components/deck-gallery";
+import { DeckArt, RuneSplit } from "@/components/deck-gallery";
 import { CardLink, DeckListing } from "@/components/deck-view";
 import { BackLink, Card, Chevron, Pill, Section, Stat, WinRate } from "@/components/ui";
 import { deleteDeckAction } from "../../actions";
 import { deckStatsFor, winRateOf } from "../stats";
 
 /**
- * One saved deck: its Legend's art, how it has done, and the list itself —
- * as cards by default (each one readable on hover or tap), or as text to
- * scan or copy.
+ * One saved deck: its Legend's art, how it has done, and the list itself
+ * (the shared viewer: cards by default, or the text list).
  */
 export default async function DeckPage(props: PageProps<"/decks/[id]">) {
   const { id } = await props.params;
-  const { view } = await props.searchParams;
   const userId = await currentUserId();
   if (!userId) redirect("/");
 
@@ -28,20 +26,6 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
   // Saved decks are personal; what others played lives on events and leagues.
   if (!deck || deck.ownerId !== userId) notFound();
   const played = (await deckStatsFor(userId)).get(deck.id) ?? null;
-  const asList = view === "list";
-
-  const viewTab = (label: string, list: boolean) => (
-    <Link
-      href={list ? `/decks/${deck.id}?view=list` : `/decks/${deck.id}`}
-      scroll={false}
-      aria-current={asList === list ? "page" : undefined}
-      className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-        asList === list ? "bg-raised text-fg shadow-sm shadow-black/40" : "text-fg-faint hover:text-fg-dim"
-      }`}
-    >
-      {label}
-    </Link>
-  );
 
   return (
     <div>
@@ -95,16 +79,9 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
         </div>
       )}
 
-      <Section
-        title="Cards"
-        action={
-          <nav aria-label="Decklist view" className="flex gap-1 rounded-xl border border-hair-soft bg-ink/60 p-1">
-            {viewTab("Cards", false)}
-            {viewTab("List", true)}
-          </nav>
-        }
-      >
-        {asList ? <DeckListing deck={deck} /> : <DeckGallery deck={deck} />}
+      <Section title="Cards">
+        {/* The hero already names the Legend. */}
+        <DeckListing deck={deck} showLegend={false} />
       </Section>
 
       {played ? (

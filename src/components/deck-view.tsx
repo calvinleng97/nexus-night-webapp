@@ -1,6 +1,8 @@
 import { cardImage } from "@/lib/domain/card-images";
 import { cardTotal, cardWikiUrl, deckSections } from "@/lib/domain/deck";
 import { CardPreview } from "./card-preview";
+import { DeckGallery } from "./deck-gallery";
+import { DeckViewSwitch } from "./deck-view-switch";
 import { deckWatchlist, type WatchCard } from "@/lib/domain/tricks";
 import type { DeckCard } from "@/lib/domain/types";
 import { MicroLabel } from "./ui";
@@ -158,8 +160,14 @@ function Watchlist({ tricks, hidden }: { tricks: WatchCard[]; hidden: WatchCard[
   );
 }
 
-/** The full list, laid out by section. Plain text, so it can be copied out. */
-export function DeckListing({ deck }: { deck: DeckLike }) {
+/**
+ * A decklist, for anyone looking at one: the Legend and its combat-trick /
+ * Hidden watchlist on top, then the cards — as card images by default, or as
+ * the plain text list (Cards / List, remembered per device).
+ *
+ * `showLegend={false}` for pages whose header already names the Legend.
+ */
+export function DeckListing({ deck, showLegend = true }: { deck: DeckLike; showLegend?: boolean }) {
   const sections = deckSections(deck);
   if (sections.length === 0)
     return (
@@ -170,31 +178,39 @@ export function DeckListing({ deck }: { deck: DeckLike }) {
     );
   const watch = deckWatchlist(deck);
   const hasWatch = watch.tricks.length + watch.hidden.length > 0;
+  const legend = showLegend ? deck.legend : null;
+
+  const header =
+    legend || hasWatch ? (
+      <details className="group/watch">
+        <summary className="pointer-events-none flex list-none flex-wrap items-center gap-x-3 gap-y-2">
+          {legend ? (
+            <span className="min-w-0">
+              <MicroLabel>Legend</MicroLabel>
+              <span className="pointer-events-auto mt-1 block w-fit text-sm font-medium text-accent">
+                <CardLink name={legend} legend />
+              </span>
+            </span>
+          ) : null}
+          {hasWatch ? <WatchToggle tricks={watch.tricks} hidden={watch.hidden} /> : null}
+        </summary>
+        {hasWatch ? <Watchlist tricks={watch.tricks} hidden={watch.hidden} /> : null}
+      </details>
+    ) : null;
+
   return (
     <div className="rounded-xl border border-hair-soft bg-ink p-4">
-      {deck.legend || hasWatch ? (
-        <details className="group/watch mb-4 border-b border-hair-soft pb-3">
-          <summary className="pointer-events-none flex list-none items-start justify-between gap-3">
-            <div className="min-w-0">
-              {deck.legend ? (
-                <>
-                  <MicroLabel>Legend</MicroLabel>
-                  <p className="pointer-events-auto mt-1 w-fit text-sm font-medium text-accent">
-                    <CardLink name={deck.legend} legend />
-                  </p>
-                </>
-              ) : null}
-            </div>
-            {hasWatch ? <WatchToggle tricks={watch.tricks} hidden={watch.hidden} /> : null}
-          </summary>
-          {hasWatch ? <Watchlist tricks={watch.tricks} hidden={watch.hidden} /> : null}
-        </details>
-      ) : null}
-      <div className="grid gap-5 sm:grid-cols-2">
-        {sections.map((s) => (
-          <Section key={s.key} label={s.label} cards={s.cards} />
-        ))}
-      </div>
+      <DeckViewSwitch
+        header={header}
+        cards={<DeckGallery deck={deck} />}
+        list={
+          <div className="grid gap-5 sm:grid-cols-2">
+            {sections.map((s) => (
+              <Section key={s.key} label={s.label} cards={s.cards} />
+            ))}
+          </div>
+        }
+      />
     </div>
   );
 }
