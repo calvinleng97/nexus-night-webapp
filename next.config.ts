@@ -6,14 +6,17 @@ const config: NextConfig = {
   // server components here).
   reactStrictMode: true,
   images: {
-    // Card images come from the League wiki as print-size PNGs (~600 KB);
-    // the optimizer serves them as WebP at the size each spot needs.
-    remotePatterns: [new URL("https://wiki.leagueoflegends.com/en-us/images/**")],
+    // Card images are the server's own copies (app/card-art/[file]), mirrored
+    // from the League wiki on first use; the optimizer resizes them to WebP.
+    localPatterns: [{ pathname: "/card-art/**", search: "" }],
     qualities: [75],
     formats: ["image/webp"],
-    // Fetched from the wiki once per size, then served from .next/cache/images
-    // (which `next build` keeps). A printed card never changes, so the copy is
-    // good for a year — this also becomes the browser's Cache-Control max-age.
+    // Only the widths the app's `sizes` actually resolve to, so the cache has a
+    // known, finite set of variants and `npm run preheat:cards` can fill it.
+    imageSizes: [256, 384],
+    deviceSizes: [640, 750, 1080, 1200, 1920],
+    // A resized copy is kept for a year: a card never changes under its name,
+    // and this also becomes the browser's Cache-Control max-age.
     minimumCacheTTL: 60 * 60 * 24 * 365,
   },
 };

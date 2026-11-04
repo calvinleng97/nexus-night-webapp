@@ -2,10 +2,11 @@ import Link from "next/link";
 import { MIN_PLAYERS, activePlayers, currentRound } from "@/lib/domain/event-machine";
 import { disputedCount, myMatch, roundProgress, type MyMatch, type Seen } from "@/lib/domain/my-match";
 import { computeStandings, recordLabel } from "@/lib/domain/standings";
-import type { NexusEvent, UserId } from "@/lib/domain/types";
+import { cardImage } from "@/lib/domain/card-images";
+import type { Deck, NexusEvent, UserId } from "@/lib/domain/types";
 import { listDecksForUser } from "@/lib/store/repo";
 import { ActionForm } from "@/components/action-form";
-import { DeckPicker } from "@/components/deck-picker";
+import { DeckPicker, type PickableDeck } from "@/components/deck-picker";
 import { MatchList, MatchRow, StandingsTable, type WhoFn } from "@/components/event-bits";
 import { ScorePad } from "@/components/score-select";
 import { Avatar, Card, Empty, LinkButton, Pill, Section, Stat } from "@/components/ui";
@@ -35,6 +36,16 @@ export default async function EventOverviewPage(props: PageProps<"/events/[id]">
 }
 
 type View = Awaited<ReturnType<typeof loadEventView>>;
+
+/** Saved decks as the picker shows them, with each Legend's art. */
+function pickable(decks: Deck[]): PickableDeck[] {
+  return decks.map((d) => ({
+    id: d.id,
+    name: d.name,
+    legend: d.legend,
+    art: d.legend ? (cardImage(d.legend, { legend: true })?.src ?? null) : null,
+  }));
+}
 
 // ------------------------------------------------------------------ sign-ups
 
@@ -67,7 +78,7 @@ async function SignUps({ userId, event, who, legendOf, myPlayer, isPlayer, isMan
             </div>
             <DeckPicker
               eventId={event.id}
-              decks={decks.map((d) => ({ id: d.id, name: d.name, legend: d.legend }))}
+              decks={pickable(decks)}
               currentId={myPlayer?.deck?.deckId ?? null}
             />
           </div>
@@ -300,7 +311,7 @@ async function Live({ userId, event, who, legendOf, myPlayer, isPlayer, isManage
           <div className="mt-3">
             <DeckPicker
               eventId={event.id}
-              decks={decks.map((d) => ({ id: d.id, name: d.name, legend: d.legend }))}
+              decks={pickable(decks)}
               currentId={myPlayer?.deck?.deckId ?? null}
             />
           </div>

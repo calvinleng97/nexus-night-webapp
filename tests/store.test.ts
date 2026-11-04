@@ -285,6 +285,36 @@ describe("file store round-trip", () => {
     expect(await repo.listDecksForUser(owner.id)).toHaveLength(0);
   });
 
+  it("edits a deck's name and list, owner only, and rejects a bad paste whole", async () => {
+    const owner = await makeUser("sub-deck-edit", "DeckEditor");
+    const other = await makeUser("sub-deck-edit-x", "DeckMeddler");
+    const deck = await repo.createDeck({
+      ownerId: owner.id,
+      name: "First try",
+      source: "Legend:\n1 Riven, The Exile\n\nMainDeck:\n3 Gust\n",
+    });
+
+    const edited = await repo.updateDeck(deck.id, owner.id, {
+      name: "Riven tempo",
+      source: "Legend:\n1 Azir, Emperor of the Sands\n\nMainDeck:\n3 Defy\n2 Discipline\n",
+    });
+    expect(edited.id).toBe(deck.id);
+    expect(edited.name).toBe("Riven tempo");
+    expect(edited.legend).toBe("Azir, Emperor of the Sands");
+    expect(edited.mainDeck.map((c) => c.name)).toEqual(["Defy", "Discipline"]);
+    expect(edited.createdAt).toBe(deck.createdAt);
+    expect(await repo.getDeck(deck.id)).toEqual(edited);
+
+    await expect(
+      repo.updateDeck(deck.id, other.id, { name: "mine now", source: "MainDeck:\n1 Gust\n" }),
+    ).rejects.toThrow(/not your deck/i);
+    await expect(
+      repo.updateDeck(deck.id, owner.id, { name: "broken", source: "MainDeck:\nAstral Heron\n" }),
+    ).rejects.toThrow(/Astral Heron/);
+    // Neither failed edit touched it.
+    expect(await repo.getDeck(deck.id)).toEqual(edited);
+  });
+
   it("only lets the owner delete a deck", async () => {
     const owner = await makeUser("sub-deck-own", "DeckKeeper");
     const thief = await makeUser("sub-deck-thief", "DeckThief");

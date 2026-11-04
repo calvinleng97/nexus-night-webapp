@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cardImage } from "@/lib/domain/card-images";
+import { CARD_FILES, cardImage } from "@/lib/domain/card-images";
 import { parseDecklist } from "@/lib/domain/deck";
 
 /** Real lists from the group, covering Origins through the newest set. */
@@ -156,11 +156,16 @@ describe("cardImage", () => {
     });
   }
 
-  it("points at the print-size file, inside the configured image pattern", () => {
-    expect(cardImage("Defy")).toEqual({
-      src: "https://wiki.leagueoflegends.com/en-us/images/RB_card_OGN-045.png",
-      landscape: false,
-    });
+  it("points at our own stored copy, inside the configured image pattern", () => {
+    expect(cardImage("Defy")).toEqual({ src: "/card-art/RB_card_OGN-045.png", landscape: false });
+  });
+
+  it("lists every card file, and only real ones", () => {
+    expect(CARD_FILES.has("RB_card_OGN-045.png")).toBe(true);
+    // Landscape markers are not part of the file name.
+    expect(CARD_FILES.has("RB_card_UNL-205.png")).toBe(true);
+    expect(CARD_FILES.has("RB_card_UNL-205:l.png")).toBe(false);
+    expect(CARD_FILES.has("../../etc/passwd")).toBe(false);
   });
 
   it("finds Legends under their title alone, and marks battlefields landscape", () => {

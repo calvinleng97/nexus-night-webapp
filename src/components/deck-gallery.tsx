@@ -1,6 +1,8 @@
 import Image from "next/image";
 import { cardImage } from "@/lib/domain/card-images";
 import { cardTotal, cardWikiUrl, deckSections } from "@/lib/domain/deck";
+import type { ReactNode } from "react";
+import type { WatchCard } from "@/lib/domain/tricks";
 import type { DeckCard } from "@/lib/domain/types";
 import { CardPreview } from "./card-preview";
 import type { DeckLike } from "./deck-view";
@@ -57,13 +59,29 @@ export function RuneSplit({ runes }: { runes: DeckCard[] }) {
   );
 }
 
-function Tile({ card }: { card: DeckCard }) {
+/** A label that sits on a card's art: dark glass, so it reads on any art. */
+function ArtTag({ children, tone = "plain" }: { children: string; tone?: "plain" | "accent" }) {
+  return (
+    <span
+      className={`rounded-md bg-ink/85 px-1.5 py-0.5 text-[0.6rem] font-bold uppercase leading-none tracking-wider ring-1 backdrop-blur ${
+        tone === "accent" ? "text-accent ring-accent/40" : "text-fg-dim ring-white/15"
+      }`}
+    >
+      {children}
+    </span>
+  );
+}
+
+function Tile({ card, tags }: { card: DeckCard; tags?: ReactNode }) {
   const image = cardImage(card.name);
   const href = cardWikiUrl(card.name);
   const badge = (
-    <span className="absolute right-1.5 top-1.5 z-10 inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-ink/90 px-1.5 font-mono text-xs font-bold tabular-nums text-fg ring-1 ring-white/15">
-      ×{card.count}
-    </span>
+    <>
+      <span className="absolute right-1.5 top-1.5 z-10 inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-ink/90 px-1.5 font-mono text-xs font-bold tabular-nums text-fg ring-1 ring-white/15">
+        ×{card.count}
+      </span>
+      {tags ? <span className="absolute inset-x-1.5 bottom-1.5 z-10 flex flex-wrap gap-1">{tags}</span> : null}
+    </>
   );
 
   if (!image)
@@ -131,6 +149,55 @@ export function DeckGallery({ deck }: { deck: DeckLike }) {
           </ul>
         </section>
       ))}
+    </div>
+  );
+}
+
+function WatchGroup({ label, cards }: { label: string; cards: WatchCard[] }) {
+  return (
+    <section>
+      <h4 className="mb-2.5 flex items-baseline gap-2 text-sm font-semibold">
+        {label}
+        <span className="font-mono text-xs font-normal tabular-nums text-fg-faint">
+          {cardTotal(cards)}
+        </span>
+      </h4>
+      {cards.length === 0 ? (
+        <p className="text-sm text-fg-faint">None.</p>
+      ) : (
+        <ul className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+          {cards.map((c, i) => (
+            <li key={`${c.name}-${i}`}>
+              <Tile
+                card={c}
+                tags={
+                  <>
+                    {c.speed ? (
+                      <ArtTag tone={c.speed === "reaction" ? "accent" : "plain"}>
+                        {c.speed === "reaction" ? "Reaction" : "Action"}
+                      </ArtTag>
+                    ) : null}
+                    {c.sideboard ? <ArtTag>Side</ArtTag> : null}
+                  </>
+                }
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/**
+ * What to watch for in a combat, as cards: the tricks (tagged Action or
+ * Reaction) and the Hidden cards, with sideboard-only ones marked Side.
+ */
+export function WatchGallery({ tricks, hidden }: { tricks: WatchCard[]; hidden: WatchCard[] }) {
+  return (
+    <div className="space-y-5">
+      <WatchGroup label="Combat tricks" cards={tricks} />
+      <WatchGroup label="Hidden" cards={hidden} />
     </div>
   );
 }
