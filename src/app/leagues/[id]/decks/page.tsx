@@ -5,9 +5,9 @@ import {
   leagueDeckHistory,
   legendUsage,
   summarizeLeagueDecks,
-  type PlayedDeck,
 } from "@/lib/domain/league-decks";
 import { formatDay } from "@/lib/domain/schedule";
+import { recordLabel } from "@/lib/domain/standings";
 import { getLeague, getUsers, listEventsForLeague } from "@/lib/store/repo";
 import { CardLink, DeckDisclosure } from "@/components/deck-view";
 import {
@@ -18,10 +18,6 @@ import {
   SectionHead,
   Stat,
 } from "@/components/ui";
-
-function record(d: Pick<PlayedDeck, "wins" | "losses" | "draws">): string {
-  return d.draws > 0 ? `${d.wins}-${d.losses}-${d.draws}` : `${d.wins}-${d.losses}`;
-}
 
 /**
  * The Decks tab: every deck played in this league, by player.
@@ -72,7 +68,7 @@ export default async function LeagueDecksPage(props: PageProps<"/leagues/[id]/de
                       <th className="py-2.5 pl-4 pr-2 font-medium">Legend</th>
                       <th className="py-2.5 pr-2 text-right font-medium">Players</th>
                       <th className="py-2.5 pr-2 text-right font-medium">Decks</th>
-                      <th className="py-2.5 pr-4 text-right font-medium">Brought</th>
+                      <th className="py-2.5 pr-4 text-right font-medium">Winrate</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -88,7 +84,7 @@ export default async function LeagueDecksPage(props: PageProps<"/leagues/[id]/de
                           {l.decks}
                         </td>
                         <td className="py-2.5 pr-4 text-right font-mono tabular-nums">
-                          {l.outings}
+                          {l.winRate === null ? "—" : `${Math.round(l.winRate * 100)}%`}
                         </td>
                       </tr>
                     ))}
@@ -124,7 +120,7 @@ export default async function LeagueDecksPage(props: PageProps<"/leagues/[id]/de
                         </p>
                       ) : null}
                       <span className="ml-auto font-mono text-sm tabular-nums text-fg-dim">
-                        {record(deck)}
+                        {recordLabel(deck)}
                       </span>
                     </div>
 
@@ -147,7 +143,7 @@ export default async function LeagueDecksPage(props: PageProps<"/leagues/[id]/de
                           ) : null}
                           {o.status === "running" ? <Badge tone="accent">live</Badge> : null}
                           <span className="font-mono text-sm tabular-nums text-fg-dim">
-                            {record(o)}
+                            {recordLabel(o)}
                           </span>
                         </li>
                       ))}

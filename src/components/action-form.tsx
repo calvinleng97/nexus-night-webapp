@@ -24,7 +24,7 @@ export function ActionForm({
   action: Action;
   fields?: Record<string, string | number>;
   label: string;
-  variant?: "default" | "primary" | "solid" | "danger" | "ghost";
+  variant?: "default" | "primary" | "solid" | "danger" | "solidDanger" | "ghost";
   size?: "md" | "lg";
   confirm?: string;
   children?: ReactNode;
@@ -46,6 +46,8 @@ export function ActionForm({
     // The strongest call to action on a page: filled, dark text on gold.
     solid: "border-accent bg-accent text-ink hover:bg-accent/90",
     danger: "border-loss/45 bg-loss/10 text-loss hover:bg-loss/20",
+    // The filled counterpart of `solid`, for undoing it (Join → Leave).
+    solidDanger: "border-loss bg-loss text-ink hover:bg-loss/90",
     ghost: "border-transparent text-fg-faint hover:text-fg",
   } as const;
 

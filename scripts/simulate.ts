@@ -78,7 +78,7 @@ function runEvent(n: number, rounds: number, seed: number, priority: PairingPrio
   for (let r = 1; r <= rounds; r++) {
     const input: PairingPlayer[] = ids.map((id) => ({
       userId: id,
-      matchPoints: pts.get(id)!,
+      weight: pts.get(id)!,
       opponents: opps.get(id)!,
       byes: byes.get(id)!,
     }));

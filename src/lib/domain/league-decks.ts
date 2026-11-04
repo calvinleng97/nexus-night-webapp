@@ -26,7 +26,6 @@ export interface DeckOuting {
   losses: number;
   draws: number;
   byes: number;
-  matchPoints: number;
 }
 
 export interface PlayedDeck {
@@ -74,14 +73,24 @@ export interface LegendUsage {
   outings: number;
   /** Distinct players who have played it. */
   players: number;
+  /** Rounds played with it, byes excluded. */
+  wins: number;
+  losses: number;
+  draws: number;
+  /**
+   * Share of rounds won, 0–1, or null before it has played a round. Counted
+   * per match, never per game: a best-of-three is the unit a deck is built
+   * for. Draws count as rounds not won; byes are not rounds against anyone.
+   */
+  winRate: number | null;
 }
 
 function whenHappened(event: NexusEvent): string {
   return event.scheduledFor ?? event.startedAt ?? event.createdAt;
 }
 
-function blankRecord(): Pick<DeckOuting, "wins" | "losses" | "draws" | "byes" | "matchPoints"> {
-  return { wins: 0, losses: 0, draws: 0, byes: 0, matchPoints: 0 };
+function blankRecord(): Pick<DeckOuting, "wins" | "losses" | "draws" | "byes"> {
+  return { wins: 0, losses: 0, draws: 0, byes: 0 };
 }
 
 function recordOf(standing: Standing | undefined) {
@@ -91,7 +100,6 @@ function recordOf(standing: Standing | undefined) {
     losses: standing.losses,
     draws: standing.draws,
     byes: standing.byes,
-    matchPoints: standing.matchPoints,
   };
 }
 
@@ -215,26 +223,46 @@ export function summarizeLeagueDecks(history: PlayerDecks[]): LeagueDeckSummary 
 
 /** Which Legends the league is actually playing, most brought first. */
 export function legendUsage(history: PlayerDecks[]): LegendUsage[] {
-  const map = new Map<string, { decks: number; outings: number; players: Set<UserId> }>();
+  const map = new Map<
+    string,
+    {
+      decks: number;
+      outings: number;
+      players: Set<UserId>;
+      wins: number;
+      losses: number;
+      draws: number;
+    }
+  >();
   for (const row of history) {
     for (const deck of row.decks) {
       if (!deck.legend) continue;
       let entry = map.get(deck.legend);
       if (!entry) {
-        entry = { decks: 0, outings: 0, players: new Set() };
+        entry = { decks: 0, outings: 0, players: new Set(), wins: 0, losses: 0, draws: 0 };
         map.set(deck.legend, entry);
       }
       entry.decks += 1;
       entry.outings += deck.outings.length;
       entry.players.add(row.userId);
+      entry.wins += deck.wins;
+      entry.losses += deck.losses;
+      entry.draws += deck.draws;
     }
   }
   return [...map.entries()]
-    .map(([legend, e]) => ({
-      legend,
-      decks: e.decks,
-      outings: e.outings,
-      players: e.players.size,
-    }))
+    .map(([legend, e]) => {
+      const rounds = e.wins + e.losses + e.draws;
+      return {
+        legend,
+        decks: e.decks,
+        outings: e.outings,
+        players: e.players.size,
+        wins: e.wins,
+        losses: e.losses,
+        draws: e.draws,
+        winRate: rounds > 0 ? e.wins / rounds : null,
+      };
+    })
     .sort((a, b) => b.outings - a.outings || a.legend.localeCompare(b.legend));
 }

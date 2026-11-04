@@ -66,7 +66,7 @@ async function main(): Promise<void> {
       career.set(s.userId, t);
       console.log(
         `   ${String(s.rank).padStart(2)}. ${name(s.userId).padEnd(20)} ` +
-          `${s.matchPoints} pts  ${s.wins}-${s.losses}${s.draws ? `-${s.draws}` : ""}` +
+          `${s.wins}-${s.losses}-${s.draws}` +
           `${s.byes ? "  (bye)" : ""}`,
       );
     }

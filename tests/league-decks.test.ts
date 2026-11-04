@@ -387,6 +387,8 @@ describe("league deck summary", () => {
       expect(u.outings).toBe(2);
       expect(u.decks).toBe(1);
       expect(u.players).toBe(1);
+      expect(u.wins + u.losses + u.draws).toBe(2);
+      expect(u.winRate).toBe(u.wins / 2);
     }
   });
 });

@@ -220,25 +220,23 @@ describe("full event progression", () => {
         expect(s.wins + s.losses + s.draws + s.byes).toBe(3);
         expect(s.byes).toBeLessThanOrEqual(1);
       }
-      // Match points must equal 3 per win plus 3 per bye.
-      for (const s of standings) expect(s.matchPoints).toBe(3 * (s.wins + s.byes) + s.draws);
     });
   }
 });
 
 describe("standings arithmetic", () => {
-  it("counts a bye as 3 points but not as a win", () => {
+  it("does not count a bye as a win", () => {
     const started = startEvent(makeEvent(3), "mgr");
     if (!started.ok) throw new Error("setup");
     const e = resolveRound(started.value.event);
     const standings = computeStandings(e);
     const withBye = standings.find((s) => s.byes === 1)!;
-    expect(withBye.matchPoints).toBe(3);
+    expect(withBye.byes).toBe(1);
     expect(withBye.wins).toBe(0);
-    expect(recordLabel(withBye)).toBe("0-0");
+    expect(recordLabel(withBye)).toBe("0-0-0");
   });
 
-  it("scores a 1-1 draw as one point each", () => {
+  it("records a 1-1 draw as a tie for both", () => {
     const started = startEvent(makeEvent(2), "mgr");
     if (!started.ok) throw new Error("setup");
     let e = started.value.event;
@@ -250,7 +248,7 @@ describe("standings arithmetic", () => {
     e = conf.value.event;
     for (const s of computeStandings(e)) {
       expect(s.draws).toBe(1);
-      expect(s.matchPoints).toBe(1);
+      expect(recordLabel(s)).toBe("0-0-1");
     }
   });
 });
