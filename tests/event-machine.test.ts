@@ -124,6 +124,42 @@ describe("reporting and confirming", () => {
     expect(oppConfirm.ok).toBe(true);
   });
 
+  it("confirms when both players submit the same score", () => {
+    const started = startEvent(makeEvent(4), "mgr");
+    if (!started.ok) throw new Error("setup");
+    const e = started.value.event;
+    const p = currentRound(e)!.pairings.find((x) => x.b !== null)!;
+
+    // A reports "I won 2-1"; B, not having seen it, reports "I lost 1-2".
+    const first = submitResult(e, p.id, p.a, { a: 2, b: 1 });
+    if (!first.ok) throw new Error(first.error);
+    const second = submitResult(first.value.event, p.id, p.b!, { a: 1, b: 2 });
+    if (!second.ok) throw new Error(second.error);
+
+    const stored = currentRound(second.value.event)!.pairings.find((x) => x.id === p.id)!;
+    expect(stored.status).toBe("confirmed");
+    expect(stored.report!.score).toEqual({ a: 2, b: 1 });
+    expect(stored.report!.submittedBy).toBe(p.a);
+    expect(stored.confirmedBy).toBe(p.b);
+  });
+
+  it("treats a differing second submission as a counter-claim for the other side", () => {
+    const started = startEvent(makeEvent(4), "mgr");
+    if (!started.ok) throw new Error("setup");
+    const e = started.value.event;
+    const p = currentRound(e)!.pairings.find((x) => x.b !== null)!;
+
+    const first = submitResult(e, p.id, p.a, { a: 2, b: 1 });
+    if (!first.ok) throw new Error(first.error);
+    const second = submitResult(first.value.event, p.id, p.b!, { a: 2, b: 1 });
+    if (!second.ok) throw new Error(second.error);
+
+    const stored = currentRound(second.value.event)!.pairings.find((x) => x.id === p.id)!;
+    expect(stored.status).toBe("awaiting_confirmation");
+    expect(stored.report!.submittedBy).toBe(p.b);
+    expect(confirmResult(second.value.event, p.id, p.a).ok).toBe(true);
+  });
+
   it("stores player B's submission from A's perspective", () => {
     const started = startEvent(makeEvent(4), "mgr");
     if (!started.ok) throw new Error("setup");

@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { currentUserId } from "@/lib/auth";
 import { formatEventDate } from "@/lib/domain/schedule";
 import { getEvent, getLeague } from "@/lib/store/repo";
+import { LiveRefresh } from "@/components/live-refresh";
 import { RouteTabs } from "@/components/route-tabs";
 import { BackLink, DateChip, PageTitle, Tag } from "@/components/ui";
 
@@ -45,6 +46,7 @@ export default async function EventLayout(props: LayoutProps<"/events/[id]">) {
         ]}
       />
       {props.children}
+      {event.status !== "complete" ? <LiveRefresh eventId={event.id} /> : null}
     </div>
   );
 }

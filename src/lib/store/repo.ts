@@ -20,7 +20,7 @@ import {
   withLock,
   writeJsonAtomic,
 } from "./fsjson";
-import { rm } from "node:fs/promises";
+import { rm, stat } from "node:fs/promises";
 import { paths } from "./paths";
 import { SCHEMA_VERSION, type StoreMeta } from "./schema";
 
@@ -444,6 +444,20 @@ export async function createEvent(input: {
 export async function getEvent(id: string): Promise<NexusEvent | null> {
   await storeReady();
   return readJson<NexusEvent>(paths.event(id));
+}
+
+/**
+ * A cheap marker that changes whenever the event file is rewritten, so open
+ * pages can tell when to re-render without loading the whole event.
+ */
+export async function getEventVersion(id: string): Promise<string | null> {
+  await storeReady();
+  try {
+    const s = await stat(paths.event(id));
+    return `${s.mtimeMs}-${s.size}`;
+  } catch {
+    return null;
+  }
 }
 
 export async function listEventsForLeague(leagueId: string): Promise<NexusEvent[]> {
