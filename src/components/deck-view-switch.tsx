@@ -26,13 +26,22 @@ export function DeckViewSwitch({
   cards,
   list,
   header,
+  watchLabel,
+  watchCards,
+  watchList,
 }: {
   cards: ReactNode;
   list: ReactNode;
-  /** Shown above whichever view is active (Legend, watchlist). */
+  /** Shown above whichever view is active (the Legend). */
   header?: ReactNode;
+  /** "10 combat tricks · 8 Hidden", or null when the deck has neither. */
+  watchLabel?: string | null;
+  /** The watchlist in each view: art for Cards, text for List. */
+  watchCards?: ReactNode;
+  watchList?: ReactNode;
 }) {
   const [view, setView] = useState<View>("cards");
+  const [watching, setWatching] = useState(false);
 
   useEffect(() => {
     const initial = stored();
@@ -74,6 +83,28 @@ export function DeckViewSwitch({
           {tab("list", "List")}
         </div>
       </div>
+      {watchLabel ? (
+        <div className="mb-5">
+          <button
+            type="button"
+            aria-expanded={watching}
+            onClick={() => setWatching((w) => !w)}
+            className={`group inline-flex items-center gap-1.5 text-sm font-medium transition-colors ${
+              watching ? "text-accent" : "text-fg-dim hover:text-fg"
+            }`}
+          >
+            {watchLabel}
+            <svg aria-hidden viewBox="0 0 16 16" className={`size-3.5 transition-transform ${watching ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 6l4 4 4-4" />
+            </svg>
+          </button>
+          {/* Hidden until asked for, so its art isn't fetched before then. */}
+          <div hidden={!watching} className="mt-3 rounded-xl border border-accent/20 bg-accent-soft/10 p-3">
+            <div hidden={view !== "cards"}>{watchCards}</div>
+            <div hidden={view !== "list"}>{watchList}</div>
+          </div>
+        </div>
+      ) : null}
       <div hidden={view !== "cards"}>{cards}</div>
       <div hidden={view !== "list"}>{list}</div>
     </div>

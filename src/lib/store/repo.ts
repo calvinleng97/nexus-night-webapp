@@ -404,6 +404,41 @@ export async function listDecksForUser(ownerId: UserId): Promise<Deck[]> {
 }
 
 /**
+ * Rename a deck and/or replace its list. The list is re-parsed exactly as on
+ * creation, so a bad paste is rejected with the parser's message and the deck
+ * is left as it was. Events keep their own snapshots; see updateDeckAction
+ * for refreshing the ones that haven't started.
+ */
+export async function updateDeck(
+  id: DeckId,
+  actorId: UserId,
+  input: { name: string; source: string },
+): Promise<Deck> {
+  await storeReady();
+  return withLock(paths.locks(), `deck-${id}`, async () => {
+    const deck = await readJson<Deck>(paths.deck(id));
+    if (!deck) throw new Error("Deck not found.");
+    if (deck.ownerId !== actorId) throw new Error("That is not your deck.");
+    const parsed = parseDecklist(input.source);
+    if (!parsed.ok) throw new Error(parsed.error);
+    const next: Deck = {
+      ...deck,
+      name: input.name.trim() || suggestDeckName(parsed.deck),
+      legend: parsed.deck.legend,
+      champions: parsed.deck.champions,
+      mainDeck: parsed.deck.mainDeck,
+      battlefields: parsed.deck.battlefields,
+      runes: parsed.deck.runes,
+      sideboard: parsed.deck.sideboard,
+      source: input.source,
+    };
+    await writeJsonAtomic(paths.deck(id), next);
+    await audit({ action: "deck_updated", deckId: id, actor: actorId });
+    return next;
+  });
+}
+
+/**
  * Delete a deck. Events keep their own snapshot of what was registered, so
  * past results are unaffected.
  */

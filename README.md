@@ -130,16 +130,22 @@ npx tsx scripts/demo.ts 7         # play a full night and print every step
 npx tsx scripts/seed-history.ts   # seed finished events so History/Elo have data
 npx tsx scripts/seed-history.ts --events=5 --players=10 --skill=-1
 npx tsx scripts/live-event.ts     # park an event mid-round to inspect player views
-npm run sync:cards                # refresh card images from the League wiki
+npm run sync:cards                # refresh the card list from the League wiki
+npm run preheat:cards             # fetch and resize every card on a running server
 ```
 
-**Card images.** Decklists show each card's picture on hover (or a tap on a
-phone), and saved decks lay out as a card grid. The images are the League
-wiki's own copies; `src/lib/domain/card-images.json` maps each wiki page title
-to its card file and is checked in, so nothing is looked up at request time.
-Run `npm run sync:cards` when a new set lands and commit the diff. Next's image
-optimizer (see `images` in `next.config.ts`) serves them as small WebP files
-rather than the ~600 KB print PNGs, caching them for a month.
+**Card images.** Decklists show card art (with a text List view), each card
+readable on hover or a tap. `src/lib/domain/card-images.json` maps each wiki
+page title to its card file; it is checked in, and `npm run sync:cards`
+refreshes it when a set lands.
+
+The server keeps its own copy of every card: `/card-art/<file>` serves it from
+`.next/cache/card-art`, downloading from the wiki only the first time
+(`NEXUS_CARD_ART_DIR` moves it). Next's optimizer resizes those copies to WebP
+at a fixed set of widths (`images` in `next.config.ts`) and keeps the results
+for a year. `next build` preserves `.next/cache`, so none of it is lost on
+deploy. After deploying, or after a `sync:cards`, run `npm run preheat:cards`
+on the server to fill both caches up front; re-runs skip what is already there.
 
 ---
 

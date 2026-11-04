@@ -9,8 +9,19 @@ import { ActionForm } from "@/components/action-form";
 import { CopyButton } from "@/components/copy-button";
 import { DeckArt, RuneSplit } from "@/components/deck-gallery";
 import { CardLink, DeckListing } from "@/components/deck-view";
-import { BackLink, Card, Chevron, Pill, Section, Stat, WinRate } from "@/components/ui";
-import { deleteDeckAction } from "../../actions";
+import {
+  BackLink,
+  Card,
+  Chevron,
+  Field,
+  LinkButton,
+  Pill,
+  Section,
+  Stat,
+  WinRate,
+  inputClass,
+} from "@/components/ui";
+import { deleteDeckAction, updateDeckAction } from "../../actions";
 import { deckStatsFor, winRateOf } from "../stats";
 
 /**
@@ -19,6 +30,7 @@ import { deckStatsFor, winRateOf } from "../stats";
  */
 export default async function DeckPage(props: PageProps<"/decks/[id]">) {
   const { id } = await props.params;
+  const { edit } = await props.searchParams;
   const userId = await currentUserId();
   if (!userId) redirect("/");
 
@@ -26,6 +38,7 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
   // Saved decks are personal; what others played lives on events and leagues.
   if (!deck || deck.ownerId !== userId) notFound();
   const played = (await deckStatsFor(userId)).get(deck.id) ?? null;
+  const editing = edit === "1";
 
   return (
     <div>
@@ -45,6 +58,11 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <RuneSplit runes={deck.runes} />
             <span className="flex-1" />
+            {editing ? null : (
+              <LinkButton href={`/decks/${deck.id}?edit=1`} size="sm" variant="primary">
+                Edit
+              </LinkButton>
+            )}
             <CopyButton
               text={decklistText(deck)}
               className="!h-8 !rounded-lg !px-3 !text-[0.8rem]"
@@ -62,6 +80,48 @@ export default async function DeckPage(props: PageProps<"/decks/[id]">) {
           </div>
         </div>
       </header>
+
+      {editing ? (
+        <Card className="mt-4 p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-[1.05rem] font-semibold">Edit deck</h2>
+            <Link href={`/decks/${deck.id}`} className="text-sm text-fg-dim hover:text-fg">
+              Cancel
+            </Link>
+          </div>
+          <ActionForm
+            action={updateDeckAction}
+            fields={{ deckId: deck.id }}
+            label="Save changes"
+            variant="solid"
+            size="lg"
+          >
+            <div className="mb-4 space-y-4">
+              <Field label="Name">
+                <input
+                  name="name"
+                  defaultValue={deck.name}
+                  maxLength={80}
+                  className={inputClass}
+                  placeholder="Left blank, the Legend's name is used"
+                />
+              </Field>
+              <Field label="Decklist">
+                <textarea
+                  name="source"
+                  required
+                  autoFocus
+                  rows={18}
+                  spellCheck={false}
+                  // The original paste, so an edit starts from exactly what was imported.
+                  defaultValue={deck.source || decklistText(deck)}
+                  className={`${inputClass} resize-y font-mono text-[0.8rem] leading-relaxed`}
+                />
+              </Field>
+            </div>
+          </ActionForm>
+        </Card>
+      ) : null}
 
       {played ? (
         <div className="mt-4 grid grid-cols-3 gap-2">

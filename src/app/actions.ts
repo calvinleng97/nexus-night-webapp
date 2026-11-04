@@ -27,10 +27,12 @@ import {
   joinLeague,
   leaveEvent,
   leaveLeague,
+  listEventsForUser,
   mutateEvent,
   removeLeagueMember,
   rotateJoinCode,
   setLeagueManager,
+  updateDeck,
 } from "@/lib/store/repo";
 
 import type { ActionState } from "./action-state";
@@ -155,6 +157,44 @@ export async function addDeckAction(_prev: ActionState, form: FormData): Promise
     revalidatePath("/decks");
     // Straight to the new deck, so you see it laid out as cards.
     redirect(`/decks/${deck.id}`);
+  });
+}
+
+/**
+ * Save edits to a deck's name or list. A night that hasn't started yet is
+ * re-registered with the new list, since nothing has been played with the old
+ * one; a night that has started keeps the list it was played with.
+ */
+export async function updateDeckAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const userId = await requireUserId();
+    const deckId = str(form, "deckId");
+    const source = typeof form.get("source") === "string" ? (form.get("source") as string) : "";
+    if (source.trim() === "") return fail("Paste a decklist first.");
+    if (source.length > 20_000) return fail("That decklist is implausibly long.");
+    const deck = await updateDeck(deckId, userId, { name: str(form, "name").slice(0, 80), source });
+
+    const upcoming = (await listEventsForUser(userId)).filter(
+      (e) =>
+        e.status === "draft" &&
+        e.players.some((p) => p.userId === userId && p.deck?.deckId === deckId),
+    );
+    for (const e of upcoming) {
+      await mutateEvent(e.id, userId, (event) => {
+        const res = setPlayerDeck(event, userId, userId, snapshotDeck(deck));
+        if (!res.ok) throw new Error(res.error);
+        return {
+          event: res.value.event,
+          log: { action: "deck_registered", targetId: userId, deckId, reason: "deck_edited" },
+          warnings: res.value.warnings,
+        };
+      });
+      revalidatePath(`/events/${e.id}`, "layout");
+    }
+
+    revalidatePath("/decks");
+    revalidatePath(`/decks/${deckId}`);
+    redirect(`/decks/${deckId}`);
   });
 }
 
