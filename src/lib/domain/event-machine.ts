@@ -25,6 +25,11 @@ export function isManager(event: NexusEvent, userId: UserId | undefined): boolea
   return !!userId && event.managerIds.includes(userId);
 }
 
+/** Finished one way or another: nothing more can be changed. */
+export function isClosed(event: NexusEvent): boolean {
+  return event.status === "complete" || event.status === "cancelled";
+}
+
 export function currentRound(event: NexusEvent): Round | null {
   return event.rounds.length > 0 ? event.rounds[event.rounds.length - 1]! : null;
 }
@@ -163,6 +168,7 @@ export function submitResult(
   score: GameScore,
   now = new Date().toISOString(),
 ): Result<{ event: NexusEvent; warnings: string[] }> {
+  if (event.status === "cancelled") return err("This event was cancelled.");
   const valid = validateScore(score);
   if (!valid.ok) return valid;
   const next = structuredClone(event);
@@ -221,6 +227,7 @@ export function confirmResult(
   actorId: UserId,
   now = new Date().toISOString(),
 ): Result<{ event: NexusEvent; warnings: string[] }> {
+  if (event.status === "cancelled") return err("This event was cancelled.");
   const next = structuredClone(event);
   const round = currentRound(next);
   if (!round) return err("This event has no active round.");
@@ -248,6 +255,7 @@ export function disputeResult(
   pairingId: string,
   actorId: UserId,
 ): Result<{ event: NexusEvent; warnings: string[] }> {
+  if (event.status === "cancelled") return err("This event was cancelled.");
   const next = structuredClone(event);
   const round = currentRound(next);
   if (!round) return err("This event has no active round.");
@@ -272,6 +280,7 @@ export function dropPlayer(
   actorId: UserId,
   now = new Date().toISOString(),
 ): Result<{ event: NexusEvent; warnings: string[] }> {
+  if (event.status === "cancelled") return err("This event was cancelled.");
   if (!isManager(event, actorId)) return err("Only an event manager can drop a player.");
   const next = structuredClone(event);
   const player = next.players.find((p) => p.userId === targetId);
@@ -314,6 +323,7 @@ export function forceCloseRound(
   actorId: UserId,
   now = new Date().toISOString(),
 ): Result<{ event: NexusEvent; warnings: string[] }> {
+  if (event.status === "cancelled") return err("This event was cancelled.");
   if (!isManager(event, actorId)) return err("Only an event manager can force a round closed.");
   const next = structuredClone(event);
   const round = currentRound(next);
@@ -354,7 +364,7 @@ export function setPlayerDeck(
 ): Result<{ event: NexusEvent; warnings: string[] }> {
   if (actorId !== targetId && !isManager(event, actorId))
     return err("You can only choose your own deck.");
-  if (event.status === "complete") return err("This event has already finished.");
+  if (isClosed(event)) return err("This event has already finished.");
   const next = structuredClone(event);
   const player = next.players.find((p) => p.userId === targetId);
   if (!player) return err("That player is not in this event.");
@@ -368,11 +378,38 @@ export function setEventDate(
   scheduledFor: string | null,
 ): Result<{ event: NexusEvent; warnings: string[] }> {
   if (!isManager(event, actorId)) return err("Only an event manager can change the date.");
-  if (event.status === "complete") return err("This event has already finished.");
+  if (isClosed(event)) return err("This event has already finished.");
   if (scheduledFor !== null && !isValidEventDate(scheduledFor))
     return err("Use a real date and time.");
   const next = structuredClone(event);
   next.scheduledFor = scheduledFor;
+  return ok({ event: next, warnings: [] });
+}
+
+/**
+ * Call off an event that has not finished. Confirmed results stay on record;
+ * open matches are left as they are and simply never resolve.
+ *
+ * With `revertElo`, the event's results stop counting toward league Elo.
+ * The caller decides whether that is allowed (see `canRevertElo`), since it
+ * depends on the rest of the league's events.
+ */
+export function cancelEvent(
+  event: NexusEvent,
+  actorId: UserId,
+  opts: { revertElo: boolean; revertAllowed: boolean },
+  now = new Date().toISOString(),
+): Result<{ event: NexusEvent; warnings: string[] }> {
+  if (!isManager(event, actorId)) return err("Only an event manager can cancel the event.");
+  if (event.status === "complete") return err("This event has already finished.");
+  if (event.status === "cancelled") return err("This event is already cancelled.");
+  if (opts.revertElo && !opts.revertAllowed)
+    return err("Later results already build on this event's Elo, so it can no longer be reverted.");
+
+  const next = structuredClone(event);
+  next.status = "cancelled";
+  next.cancelledAt = now;
+  next.eloReverted = opts.revertElo;
   return ok({ event: next, warnings: [] });
 }
 
@@ -402,5 +439,7 @@ export function emptyEvent(input: {
     createdAt: now,
     startedAt: null,
     completedAt: null,
+    cancelledAt: null,
+    eloReverted: false,
   };
 }

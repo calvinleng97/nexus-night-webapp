@@ -1,9 +1,15 @@
-import { listDecksForUser } from "@/lib/store/repo";
+import { canRevertElo, hasRatedMatches } from "@/lib/domain/elo";
+import { listDecksForUser, listEventsForLeague } from "@/lib/store/repo";
 import { ActionForm } from "@/components/action-form";
 import { DeckPicker } from "@/components/deck-picker";
 import { EventDateControl } from "@/components/event-date";
 import { Card, MicroLabel, Tag } from "@/components/ui";
-import { joinEventAction, leaveEventAction, startEventAction } from "../../actions";
+import {
+  cancelEventAction,
+  joinEventAction,
+  leaveEventAction,
+  startEventAction,
+} from "../../actions";
 import { loadEventView } from "./load";
 
 /**
@@ -15,6 +21,9 @@ export default async function EventRegistrationPage(props: PageProps<"/events/[i
   const { userId, event, myPlayer, isPlayer, isManager } = await loadEventView(id);
   const myDecks = await listDecksForUser(userId);
   const open = event.status === "draft";
+  const live = open || event.status === "running";
+  const rated = isManager && live && hasRatedMatches(event);
+  const revertable = rated && canRevertElo(await listEventsForLeague(event.leagueId), event.id);
   const dropped = myPlayer?.droppedAfterRound != null;
 
   return (
@@ -50,7 +59,7 @@ export default async function EventRegistrationPage(props: PageProps<"/events/[i
       )}
 
       {/* Decks can change until the event is over. */}
-      {isPlayer && event.status !== "complete" ? (
+      {isPlayer && live ? (
         <Card className="p-5">
           <div className="mb-4 flex items-center gap-3">
             <h2 className="min-w-0 flex-1 font-semibold">Your deck</h2>
@@ -60,7 +69,7 @@ export default async function EventRegistrationPage(props: PageProps<"/events/[i
         </Card>
       ) : null}
 
-      {isManager ? (
+      {isManager && live ? (
         <Card tone="raised" className="space-y-5 p-5">
           <MicroLabel>Manager</MicroLabel>
           {open ? (
@@ -75,6 +84,27 @@ export default async function EventRegistrationPage(props: PageProps<"/events/[i
           ) : null}
           <div className={open ? "border-t border-hair-soft pt-5" : ""}>
             <EventDateControl eventId={event.id} value={event.scheduledFor} />
+          </div>
+          <div className="flex flex-wrap items-center gap-2 border-t border-hair-soft pt-5">
+            {revertable ? (
+              <ActionForm
+                action={cancelEventAction}
+                fields={{ eventId: event.id, revertElo: "1" }}
+                label="Cancel & revert Elo"
+                variant="danger"
+                confirm="Cancel and undo its Elo?"
+                compact
+              />
+            ) : null}
+            <ActionForm
+              action={cancelEventAction}
+              fields={{ eventId: event.id }}
+              label={rated ? "Cancel, keep Elo" : "Cancel event"}
+              variant="danger"
+              confirm="Cancel this event?"
+              compact
+            />
+            {rated && !revertable ? <Tag>Elo locked</Tag> : null}
           </div>
         </Card>
       ) : null}

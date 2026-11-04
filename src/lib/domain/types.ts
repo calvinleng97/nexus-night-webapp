@@ -80,7 +80,7 @@ export interface RegisteredDeck {
   registeredAt: string;
 }
 
-export type EventStatus = "draft" | "running" | "complete";
+export type EventStatus = "draft" | "running" | "complete" | "cancelled";
 
 export interface EventPlayer {
   userId: UserId;
@@ -168,6 +168,14 @@ export interface NexusEvent {
   createdAt: string;
   startedAt: string | null;
   completedAt: string | null;
+  /** Set when a manager called the event off before it finished. */
+  cancelledAt: string | null;
+  /**
+   * True when the event was cancelled with its Elo reverted: its results
+   * stay on record but no longer count toward league ratings. Only possible
+   * while its matches were the league's most recent rated ones.
+   */
+  eloReverted: boolean;
 }
 
 /** Derived, never stored: computed from an event's confirmed results. */

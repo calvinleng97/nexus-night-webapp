@@ -257,7 +257,7 @@ export default async function EventBracketPage(props: PageProps<"/events/[id]/br
       ) : null}
 
       {/* -------------------------------------------------- manager tools */}
-      {isManager ? (
+      {isManager && event.status === "running" ? (
         <details className="group">
           <summary className="cursor-pointer list-none text-sm text-fg-faint transition-colors hover:text-fg">
             <span className="inline-block transition-transform group-open:rotate-90">▸</span>{" "}

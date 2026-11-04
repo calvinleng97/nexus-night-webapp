@@ -6,7 +6,7 @@
  * which is a question about the past, so deleting a deck does not erase it
  * from the league's record.
  *
- * Draft events are excluded on purpose: a deck registered for an event that
+ * Events that never started (drafts, and drafts that were cancelled) are excluded on purpose: a deck registered for an event that
  * has not started has not been played yet, so it has no record here. (It is
  * still visible on that event's Players tab.)
  */
@@ -119,7 +119,7 @@ export function leagueDeckHistory(
   };
   for (const id of memberIds) ensure(id);
 
-  const played = events.filter((e) => e.status !== "draft");
+  const played = events.filter((e) => e.startedAt !== null);
 
   for (const event of played) {
     const standings = new Map(computeStandings(event).map((s) => [s.userId, s]));

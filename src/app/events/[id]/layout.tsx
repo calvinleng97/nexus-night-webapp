@@ -34,6 +34,8 @@ export default async function EventLayout(props: LayoutProps<"/events/[id]">) {
           </Tag>
         ) : null}
         {event.status === "complete" ? <Tag>Final</Tag> : null}
+        {event.status === "cancelled" ? <Tag tone="warn">Cancelled</Tag> : null}
+        {event.eloReverted ? <Tag>Elo reverted</Tag> : null}
       </div>
 
       <RouteTabs
@@ -46,7 +48,9 @@ export default async function EventLayout(props: LayoutProps<"/events/[id]">) {
         ]}
       />
       {props.children}
-      {event.status !== "complete" ? <LiveRefresh eventId={event.id} /> : null}
+      {event.status === "draft" || event.status === "running" ? (
+        <LiveRefresh eventId={event.id} />
+      ) : null}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  cancelEvent,
   confirmResult,
   disputeResult,
   dropPlayer,
@@ -328,5 +329,58 @@ describe("pairing lookup", () => {
     for (const p of e.players) {
       expect(pairingForUser(currentRound(e)!, p.userId)).not.toBeNull();
     }
+  });
+});
+
+describe("cancelling an event", () => {
+  const live = () => {
+    const started = startEvent(makeEvent(4), "mgr");
+    if (!started.ok) throw new Error("setup");
+    return started.value.event;
+  };
+  const keep = { revertElo: false, revertAllowed: true };
+  const revert = { revertElo: true, revertAllowed: true };
+
+  it("cancels a running event and keeps its results", () => {
+    const e = resolveRound(live());
+    const res = cancelEvent(e, "mgr", keep, "2026-01-01T00:00:00.000Z");
+    if (!res.ok) throw new Error(res.error);
+    expect(res.value.event.status).toBe("cancelled");
+    expect(res.value.event.cancelledAt).toBe("2026-01-01T00:00:00.000Z");
+    expect(res.value.event.eloReverted).toBe(false);
+    expect(res.value.event.rounds).toEqual(e.rounds);
+  });
+
+  it("marks the Elo reverted when asked and allowed", () => {
+    const res = cancelEvent(live(), "mgr", revert);
+    if (!res.ok) throw new Error(res.error);
+    expect(res.value.event.eloReverted).toBe(true);
+  });
+
+  it("refuses a revert that later results depend on", () => {
+    expect(cancelEvent(live(), "mgr", { revertElo: true, revertAllowed: false }).ok).toBe(false);
+  });
+
+  it("cancels a draft", () => {
+    expect(cancelEvent(makeEvent(4), "mgr", keep).ok).toBe(true);
+  });
+
+  it("refuses a non-manager, a finished event, and a second cancel", () => {
+    expect(cancelEvent(live(), "p0", keep).ok).toBe(false);
+    expect(cancelEvent({ ...live(), status: "complete" }, "mgr", keep).ok).toBe(false);
+    const once = cancelEvent(live(), "mgr", keep);
+    if (!once.ok) throw new Error(once.error);
+    expect(cancelEvent(once.value.event, "mgr", keep).ok).toBe(false);
+  });
+
+  it("takes no more results once cancelled", () => {
+    const res = cancelEvent(live(), "mgr", keep);
+    if (!res.ok) throw new Error(res.error);
+    const e = res.value.event;
+    const p = currentRound(e)!.pairings.find((x) => x.b !== null)!;
+    expect(submitResult(e, p.id, p.a, { a: 2, b: 0 }).ok).toBe(false);
+    expect(submitResult(e, p.id, "mgr", { a: 2, b: 0 }).ok).toBe(false);
+    expect(dropPlayer(e, p.a, "mgr").ok).toBe(false);
+    expect(forceCloseRound(e, "mgr").ok).toBe(false);
   });
 });

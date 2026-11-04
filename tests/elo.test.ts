@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_ELO, computeLeagueElo, expectedScore } from "@/lib/domain/elo";
+import { DEFAULT_ELO, canRevertElo, computeLeagueElo, expectedScore } from "@/lib/domain/elo";
 import type { MatchKind, MatchStatus, NexusEvent, Pairing, Round } from "@/lib/domain/types";
 
 interface MatchSpec {
@@ -50,6 +50,8 @@ function makeEvent(matches: MatchSpec[], id = "ev_1", at = "2026-01-01T00:00:00.
     createdAt: at,
     startedAt: at,
     completedAt: at,
+    cancelledAt: null,
+    eloReverted: false,
   };
 }
 
@@ -212,5 +214,44 @@ describe("the table", () => {
     const forwards = computeLeagueElo([early, late], ["x", "y"]);
     const backwards = computeLeagueElo([late, early], ["x", "y"]);
     expect(by(forwards, "x").rating).toBe(by(backwards, "x").rating);
+  });
+});
+
+describe("reverting an event's Elo", () => {
+  const first = makeEvent([{ a: "x", b: "y", ga: 2, gb: 0 }], "ev_1", "2026-01-01T00:00:00.000Z");
+  const second = makeEvent([{ a: "y", b: "x", ga: 2, gb: 1 }], "ev_2", "2026-01-08T00:00:00.000Z");
+
+  it("drops a reverted event's matches from the ratings", () => {
+    const reverted = { ...second, status: "cancelled" as const, eloReverted: true };
+    expect(computeLeagueElo([first, reverted], ["x", "y"])).toEqual(
+      computeLeagueElo([first], ["x", "y"]),
+    );
+  });
+
+  it("is allowed for the league's most recent rated event", () => {
+    expect(canRevertElo([first, second], "ev_2")).toBe(true);
+  });
+
+  it("is refused once a later event has rated matches", () => {
+    expect(canRevertElo([first, second], "ev_1")).toBe(false);
+  });
+
+  it("is allowed when the later event has nothing rated yet", () => {
+    const unplayed = makeEvent(
+      [{ a: "y", b: "x", status: "pending" }],
+      "ev_2",
+      "2026-01-08T00:00:00.000Z",
+    );
+    expect(canRevertElo([first, unplayed], "ev_1")).toBe(true);
+  });
+
+  it("is allowed again once the later event is itself reverted", () => {
+    const reverted = { ...second, eloReverted: true };
+    expect(canRevertElo([first, reverted], "ev_1")).toBe(true);
+  });
+
+  it("always allows an event with no rated matches", () => {
+    const empty = makeEvent([], "ev_0", "2025-12-01T00:00:00.000Z");
+    expect(canRevertElo([empty, first, second], "ev_0")).toBe(true);
   });
 });

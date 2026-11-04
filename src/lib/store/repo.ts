@@ -1,6 +1,7 @@
 import { loadConfig } from "../config";
 import { newId, newJoinCode, newSeed, normalizeJoinCode, userIdFromGoogleSub } from "../ids";
-import { emptyEvent } from "../domain/event-machine";
+import { cancelEvent as cancelEventTransition, emptyEvent } from "../domain/event-machine";
+import { canRevertElo } from "../domain/elo";
 import { eventOrderKey } from "../domain/schedule";
 import type {
   Deck,
@@ -123,6 +124,15 @@ async function migrate(from: number): Promise<void> {
         }),
       );
       await writeJsonAtomic(file, { ...event, players });
+    }
+  }
+  if (from < 6) {
+    // v6 introduced cancellation. Nothing had been cancelled before.
+    const files = await listJsonFiles(paths.eventsDir());
+    for (const file of files) {
+      const event = await readJson<NexusEvent>(file);
+      if (!event || event.eloReverted !== undefined) continue;
+      await writeJsonAtomic(file, { ...event, cancelledAt: null, eloReverted: false });
     }
   }
   await writeJsonAtomic(paths.meta(), {
@@ -529,10 +539,43 @@ export async function mutateEvent(
       });
     if (event.status === "complete" && before.status !== "complete")
       await appendJsonl(paths.eventLog(id), { at, actor: actorId, action: "event_completed" });
+    if (event.status === "cancelled" && before.status !== "cancelled")
+      await appendJsonl(paths.eventLog(id), {
+        at,
+        actor: actorId,
+        action: "event_cancelled",
+        eloReverted: event.eloReverted,
+      });
 
     await audit({ action: "event_mutated", eventId: id, actor: actorId, detail: log.action });
     return { event, warnings: warnings ?? [] };
   });
+}
+
+/**
+ * Cancel an event, optionally reverting its Elo.
+ *
+ * Whether the revert is allowed depends on the league's other events, which
+ * are read just before taking this event's lock; the locked copy of this
+ * event replaces its stale one in that set.
+ */
+export async function cancelEvent(
+  eventId: string,
+  actorId: UserId,
+  revertElo: boolean,
+): Promise<NexusEvent> {
+  const existing = await getEvent(eventId);
+  if (!existing) throw new Error("Event not found.");
+  const others = (await listEventsForLeague(existing.leagueId)).filter((e) => e.id !== eventId);
+  const { event } = await mutateEvent(eventId, actorId, (e) => {
+    const res = cancelEventTransition(e, actorId, {
+      revertElo,
+      revertAllowed: canRevertElo([...others, e], e.id),
+    });
+    if (!res.ok) throw new Error(res.error);
+    return { event: res.value.event, log: { action: "event_cancelled", revertElo, by: actorId } };
+  });
+  return event;
 }
 
 export async function joinEvent(eventId: string, userId: UserId): Promise<NexusEvent> {
