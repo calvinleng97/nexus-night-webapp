@@ -22,7 +22,10 @@
  *   priority "avoid-rematch"      rematches   >  record gap >  bye position
  *
  * A second bye outranks everything in both modes, which is always satisfiable
- * for n >= 3.
+ * for n >= 3. Next comes the bye going to the worst record: it is a hard rule,
+ * not a cost, so the solver only chooses among eligible players tied for the
+ * lowest match points and never hands the bye to a better record to keep
+ * groups even.
  */
 
 export interface PairingPlayer {
@@ -349,9 +352,12 @@ export function pairRound(
   if (eligible.length === 0)
     warnings.push("Every remaining player has already had a bye; one player must take a second.");
 
-  // Prefer handing the bye to the lowest-ranked eligible player. For large
-  // fields only consider the bottom few candidates to bound the work.
-  const fromBottom = [...candidatePool].reverse();
+  // The bye always goes to an eligible player on the WORST record. Only among
+  // players tied on that record does the matching cost pick who takes it (with
+  // standings position as the final tiebreak). For large fields only consider
+  // the bottom few candidates to bound the work.
+  const worstPoints = Math.min(...candidatePool.map((p) => p.matchPoints));
+  const fromBottom = candidatePool.filter((p) => p.matchPoints === worstPoints).reverse();
   const candidates = ordered.length > EXACT_LIMIT ? fromBottom.slice(0, 4) : fromBottom;
 
   let best: { pairs: Array<{ a: string; b: string; rematch: boolean }>; bye: string; cost: number; exact: boolean } | null =

@@ -267,9 +267,9 @@ describe("bye selection", () => {
     for (const pr of out.pairs) expect(byId.get(pr.a)).toBe(byId.get(pr.b));
   });
 
-  it("uses the bye to even out an odd record group", () => {
-    // Three 3-pointers and two 0-pointers: giving the bye to a 0-pointer would
-    // leave an odd top group, so the cheapest outcome pairs within records.
+  it("gives the bye to the worst record even when that leaves an odd group", () => {
+    // Three 3-pointers and two 0-pointers: the bye goes to a 0-pointer, and one
+    // 3-pointer pairs down against the other 0-pointer.
     const players = [
       player("a", 3, []),
       player("b", 3, []),
@@ -278,7 +278,18 @@ describe("bye selection", () => {
       player("e", 0, []),
     ];
     const out = pairRound(players, { seed: 9 });
-    expect(out.recordGap).toBe(0);
-    expect(["a", "b", "c"]).toContain(out.bye);
+    expect(["d", "e"]).toContain(out.bye);
+  });
+
+  it("gives the bye to the worst eligible record, skipping players who had one", () => {
+    const players = [
+      player("a", 6, []),
+      player("e", 6, []),
+      player("b", 3, []),
+      player("c", 3, []),
+      player("d", 0, [], 1),
+    ];
+    const out = pairRound(players, { seed: 4 });
+    expect(["b", "c"]).toContain(out.bye);
   });
 });
