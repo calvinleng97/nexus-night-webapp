@@ -237,9 +237,9 @@ export function MatchRow({
       <span className="flex w-[4.75rem] shrink-0 flex-col items-center gap-1">
         {middle}
         {pairing.rematch || pairing.kind === "forfeit" ? (
-          <span className="text-[0.65rem] text-fg-faint">
-            {pairing.kind === "forfeit" ? "forfeit" : "rematch"}
-          </span>
+          <Pill size="sm" tone={pairing.kind === "forfeit" ? "loss" : "draw"}>
+            {pairing.kind === "forfeit" ? "Forfeit" : "Rematch"}
+          </Pill>
         ) : null}
       </span>
       <Side

@@ -151,9 +151,10 @@ export async function addDeckAction(_prev: ActionState, form: FormData): Promise
     if (source.trim() === "") return fail("Paste a decklist first.");
     if (source.length > 20_000) return fail("That decklist is implausibly long.");
     // createDeck throws the parser's message, which names the offending line.
-    await createDeck({ ownerId: userId, name: str(form, "name").slice(0, 80), source });
+    const deck = await createDeck({ ownerId: userId, name: str(form, "name").slice(0, 80), source });
     revalidatePath("/decks");
-    return { ok: true };
+    // Straight to the new deck, so you see it laid out as cards.
+    redirect(`/decks/${deck.id}`);
   });
 }
 
@@ -162,10 +163,8 @@ export async function deleteDeckAction(_prev: ActionState, form: FormData): Prom
     const userId = await requireUserId();
     await deleteDeck(str(form, "deckId"), userId);
     revalidatePath("/decks");
-    return {
-      ok: true,
-      warnings: ["Events you already registered it for keep their own record of it."],
-    };
+    // Deleting happens on the deck's own page, which no longer exists.
+    redirect("/decks");
   });
 }
 

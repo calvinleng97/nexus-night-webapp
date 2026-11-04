@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { currentRound } from "@/lib/domain/event-machine";
+import { MIN_PLAYERS, activePlayers, currentRound } from "@/lib/domain/event-machine";
 import { disputedCount, myMatch, roundProgress, type MyMatch, type Seen } from "@/lib/domain/my-match";
 import { computeStandings, recordLabel } from "@/lib/domain/standings";
 import type { NexusEvent, UserId } from "@/lib/domain/types";
@@ -82,12 +82,12 @@ async function SignUps({ userId, event, who, legendOf, myPlayer, isPlayer, isMan
         />
       )}
 
-      {isManager ? (
+      {isManager && activePlayers(event).length >= MIN_PLAYERS ? (
         <ActionForm
           action={startEventAction}
           fields={{ eventId: event.id }}
           label={`Start event · ${event.players.length} ${event.players.length === 1 ? "player" : "players"}`}
-          variant={event.players.length >= 2 ? "primary" : "default"}
+          variant="primary"
           size="lg"
           confirm="Close sign-ups and pair round 1"
           className="mt-4"

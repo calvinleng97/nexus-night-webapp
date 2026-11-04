@@ -120,7 +120,7 @@ as an authorized redirect URI on your OAuth client. `localhost` is the one host
 Google accepts without a domain.
 
 ```bash
-npm test          # 88 tests: pairing, event lifecycle, storage, Elo, migrations
+npm test          # pairing, event lifecycle, storage, Elo, migrations, card images
 npm run typecheck
 npm run simulate  # pairing probe across field sizes
 npm run simulate -- 2-64 --trials=200
@@ -130,7 +130,16 @@ npx tsx scripts/demo.ts 7         # play a full night and print every step
 npx tsx scripts/seed-history.ts   # seed finished events so History/Elo have data
 npx tsx scripts/seed-history.ts --events=5 --players=10 --skill=-1
 npx tsx scripts/live-event.ts     # park an event mid-round to inspect player views
+npm run sync:cards                # refresh card images from the League wiki
 ```
+
+**Card images.** Decklists show each card's picture on hover (or a tap on a
+phone), and saved decks lay out as a card grid. The images are the League
+wiki's own copies; `src/lib/domain/card-images.json` maps each wiki page title
+to its card file and is checked in, so nothing is looked up at request time.
+Run `npm run sync:cards` when a new set lands and commit the diff. Next's image
+optimizer (see `images` in `next.config.ts`) serves them as small WebP files
+rather than the ~600 KB print PNGs, caching them for a month.
 
 ---
 

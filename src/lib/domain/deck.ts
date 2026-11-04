@@ -246,6 +246,13 @@ export function snapshotDeck(
   };
 }
 
+/** The wiki page title for a card, without the `Riftbound:` namespace. */
+export function cardWikiTitle(name: string, { legend = false }: { legend?: boolean } = {}): string {
+  const trimmed = name.trim();
+  const comma = trimmed.indexOf(",");
+  return legend && comma >= 0 ? trimmed.slice(comma + 1).trim() || trimmed : trimmed;
+}
+
 /**
  * The League wiki keeps every Riftbound card under the `Riftbound:` title,
  * spaces as underscores, commas and apostrophes left alone:
@@ -255,10 +262,7 @@ export function snapshotDeck(
  * "Jinx, Loose Cannon" lives at `Riftbound:Loose_Cannon`.
  */
 export function cardWikiUrl(name: string, { legend = false }: { legend?: boolean } = {}): string {
-  const trimmed = name.trim();
-  const comma = trimmed.indexOf(",");
-  const title = legend && comma >= 0 ? trimmed.slice(comma + 1).trim() || trimmed : trimmed;
-  const slug = title.replace(/\s+/g, "_");
+  const slug = cardWikiTitle(name, { legend }).replace(/\s+/g, "_");
   return `https://wiki.leagueoflegends.com/en-us/Riftbound:${encodeURIComponent(slug).replaceAll(
     "%2C",
     ",",

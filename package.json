@@ -9,7 +9,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "simulate": "tsx scripts/simulate.ts"
+    "simulate": "tsx scripts/simulate.ts",
+    "sync:cards": "tsx scripts/sync-card-images.ts"
   },
   "dependencies": {
     "next": "16.4.2",

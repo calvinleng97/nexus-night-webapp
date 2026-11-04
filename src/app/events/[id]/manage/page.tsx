@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { canRevertElo } from "@/lib/domain/elo";
-import { currentRound } from "@/lib/domain/event-machine";
+import { MIN_PLAYERS, activePlayers, currentRound } from "@/lib/domain/event-machine";
 import { listEventsForLeague } from "@/lib/store/repo";
 import { ActionForm } from "@/components/action-form";
 import { EventDateControl } from "@/components/event-date";
@@ -39,7 +39,7 @@ export default async function EventManagePage(props: PageProps<"/events/[id]/man
 
   return (
     <div>
-      {event.status === "draft" ? (
+      {event.status === "draft" && activePlayers(event).length >= MIN_PLAYERS ? (
         <ActionForm
           action={startEventAction}
           fields={{ eventId: event.id }}
