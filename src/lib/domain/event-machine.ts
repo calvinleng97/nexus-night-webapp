@@ -180,6 +180,26 @@ export function submitResult(
   // Scores are always stored from player A's perspective.
   const oriented: GameScore = side === "b" ? { a: score.b, b: score.a } : { a: score.a, b: score.b };
 
+  // Both players often report at the same moment, each from a page that still
+  // showed the match as pending. If the opponent already submitted this exact
+  // score, the second submission is agreement, not a new claim to confirm.
+  const prior = pairing.report;
+  if (
+    side &&
+    pairing.status === "awaiting_confirmation" &&
+    prior &&
+    prior.submittedBy !== actorId &&
+    sideOf(pairing, prior.submittedBy) &&
+    prior.score.a === oriented.a &&
+    prior.score.b === oriented.b
+  ) {
+    pairing.status = "confirmed";
+    pairing.confirmedBy = actorId;
+    pairing.resolvedAt = now;
+    const advanced = maybeAdvance(next, now);
+    return ok({ event: advanced.event, warnings: advanced.warnings });
+  }
+
   pairing.report = { score: oriented, submittedBy: actorId, submittedAt: now };
   pairing.disputedBy = null;
 
