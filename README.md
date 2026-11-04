@@ -58,13 +58,15 @@ any accumulation of lower-priority ones:
 
 | Priority | Ordering |
 |---|---|
-| `record` (default) | second bye ≫ **record gap** ≫ rematches ≫ bye position |
-| `avoid-rematch` | second bye ≫ **rematches** ≫ record gap ≫ bye position |
+| `record` (default) | second bye ≫ bye to worst record ≫ **record gap** ≫ rematches ≫ bye position |
+| `avoid-rematch` | second bye ≫ bye to worst record ≫ **rematches** ≫ record gap ≫ bye position |
 
 **The default is strict record-pairing.** Players on equal match points are
 matched whenever group sizes allow, *accepting a rematch when that is what
 keeping records together requires*. A second bye outranks everything in both
-modes, and is always avoidable for n ≥ 3. Because costs are soft below that, a
+modes, and is always avoidable for n ≥ 3. After that, the bye always goes to an
+eligible player on the worst record, even if that leaves an odd record group
+that has to pair down. Because costs are soft below that, a
 pairing always exists and the engine can never deadlock.
 
 Switch with `pairing.priority` in `nexus.config.json`.
