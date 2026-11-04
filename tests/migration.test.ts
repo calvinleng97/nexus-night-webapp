@@ -171,6 +171,13 @@ describe("store migrations", () => {
     expect(row.deck?.source).toBe("");
   });
 
+  it("marks an event written before cancellation existed as not cancelled", async () => {
+    await repo.storeReady();
+    const event = (await repo.getEvent("ev_legacy"))!;
+    expect(event.cancelledAt).toBeNull();
+    expect(event.status).toBe("complete");
+  });
+
   it("leaves a migrated event alone on a second bootstrap", async () => {
     await repo.storeReady();
     const before = JSON.stringify((await repo.getEvent("ev_legacy"))!.players);

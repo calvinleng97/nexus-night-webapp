@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  cancelEvent,
   confirmResult,
   disputeResult,
   dropPlayer,
@@ -328,5 +329,47 @@ describe("pairing lookup", () => {
     for (const p of e.players) {
       expect(pairingForUser(currentRound(e)!, p.userId)).not.toBeNull();
     }
+  });
+});
+
+describe("cancelling an event", () => {
+  const live = () => {
+    const started = startEvent(makeEvent(4), "mgr");
+    if (!started.ok) throw new Error("setup");
+    return started.value.event;
+  };
+
+  it("cancels a running event", () => {
+    const res = cancelEvent(resolveRound(live()), "mgr", true, "2026-01-01T00:00:00.000Z");
+    if (!res.ok) throw new Error(res.error);
+    expect(res.value.event.status).toBe("cancelled");
+    expect(res.value.event.cancelledAt).toBe("2026-01-01T00:00:00.000Z");
+  });
+
+  it("refuses once later results build on its Elo", () => {
+    expect(cancelEvent(live(), "mgr", false).ok).toBe(false);
+  });
+
+  it("cancels a draft", () => {
+    expect(cancelEvent(makeEvent(4), "mgr", true).ok).toBe(true);
+  });
+
+  it("refuses a non-manager, a finished event, and a second cancel", () => {
+    expect(cancelEvent(live(), "p0", true).ok).toBe(false);
+    expect(cancelEvent({ ...live(), status: "complete" }, "mgr", true).ok).toBe(false);
+    const once = cancelEvent(live(), "mgr", true);
+    if (!once.ok) throw new Error(once.error);
+    expect(cancelEvent(once.value.event, "mgr", true).ok).toBe(false);
+  });
+
+  it("takes no more results once cancelled", () => {
+    const res = cancelEvent(live(), "mgr", true);
+    if (!res.ok) throw new Error(res.error);
+    const e = res.value.event;
+    const p = currentRound(e)!.pairings.find((x) => x.b !== null)!;
+    expect(submitResult(e, p.id, p.a, { a: 2, b: 0 }).ok).toBe(false);
+    expect(submitResult(e, p.id, "mgr", { a: 2, b: 0 }).ok).toBe(false);
+    expect(dropPlayer(e, p.a, "mgr").ok).toBe(false);
+    expect(forceCloseRound(e, "mgr").ok).toBe(false);
   });
 });

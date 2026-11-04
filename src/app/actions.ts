@@ -16,6 +16,7 @@ import {
   submitResult,
 } from "@/lib/domain/event-machine";
 import {
+  cancelEvent,
   createDeck,
   createEvent,
   createLeague,
@@ -388,5 +389,16 @@ export async function forceCloseRoundAction(_prev: ActionState, form: FormData):
     });
     revalidatePath(`/events/${eventId}`, "layout");
     return { ok: true, warnings };
+  });
+}
+
+export async function cancelEventAction(_prev: ActionState, form: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const userId = await requireUserId();
+    const eventId = str(form, "eventId");
+    const event = await cancelEvent(eventId, userId);
+    revalidatePath(`/events/${eventId}`, "layout");
+    revalidatePath(`/leagues/${event.leagueId}`, "layout");
+    return { ok: true };
   });
 }

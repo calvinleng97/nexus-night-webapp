@@ -15,6 +15,7 @@ import type { NexusEvent, UserId } from "./types";
  * What does not:
  *   - byes, which have no opponent to rate against
  *   - forfeits from a drop, which say nothing about how either player plays
+ *   - anything in a cancelled event, which counts as never having happened
  *
  * Game margin is ignored: 2-0 and 2-1 move a rating identically, the same way
  * standings treat them. The per-game scores are all on disk, so a
@@ -62,6 +63,7 @@ export function expectedScore(ratingA: number, ratingB: number): number {
 }
 
 interface RatedMatch {
+  eventId: string;
   a: UserId;
   b: UserId;
   /** Player A's result: 1 win, 0.5 draw, 0 loss. */
@@ -73,12 +75,14 @@ interface RatedMatch {
 function ratedMatches(events: NexusEvent[]): RatedMatch[] {
   const out: RatedMatch[] = [];
   for (const event of events) {
+    if (event.status === "cancelled") continue;
     const eventAt = event.startedAt ?? event.createdAt;
     for (const round of event.rounds) {
       for (const p of round.pairings) {
         if (p.kind !== "played" || p.status !== "confirmed" || p.b === null || !p.report) continue;
         const { a: ga, b: gb } = p.report.score;
         out.push({
+          eventId: event.id,
           a: p.a,
           b: p.b,
           scoreA: ga > gb ? 1 : ga < gb ? 0 : 0.5,
@@ -92,6 +96,22 @@ function ratedMatches(events: NexusEvent[]): RatedMatch[] {
     if (x.order[1] !== y.order[1]) return x.order[1] - y.order[1];
     return x.order[2].localeCompare(y.order[2]);
   });
+}
+
+/**
+ * Whether an event's Elo changes can be taken back without disturbing anyone
+ * else's: true when none of its matches has a rated match from another event
+ * after it, i.e. its matches are the most recent the league has rated. An
+ * event with no rated matches has nothing to revert, so it always can.
+ *
+ * Ratings are recomputed from scratch, so reverting an older event would
+ * quietly re-rate every match played since. This is the guard against that.
+ */
+export function canRevertElo(events: NexusEvent[], eventId: string): boolean {
+  const matches = ratedMatches(events);
+  const first = matches.findIndex((m) => m.eventId === eventId);
+  if (first === -1) return true;
+  return matches.slice(first).every((m) => m.eventId === eventId);
 }
 
 /**

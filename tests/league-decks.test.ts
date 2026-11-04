@@ -5,7 +5,14 @@ import {
   legendUsage,
   summarizeLeagueDecks,
 } from "@/lib/domain/league-decks";
-import { confirmResult, currentRound, emptyEvent, startEvent, submitResult } from "@/lib/domain/event-machine";
+import {
+  cancelEvent,
+  confirmResult,
+  currentRound,
+  emptyEvent,
+  startEvent,
+  submitResult,
+} from "@/lib/domain/event-machine";
 import type { Deck, NexusEvent, RegisteredDeck } from "@/lib/domain/types";
 
 function makeDeck(id: string, ownerId: string, legend: string, name = legend): Deck {
@@ -76,6 +83,42 @@ const vex = makeDeck("dk_vex", "p1", "Vex, Apathetic");
 const jinx = makeDeck("dk_jinx", "p0", "Jinx, Loose Cannon", "Jinx burn");
 
 describe("league deck history", () => {
+  it("leaves out a cancelled event as if it never happened", () => {
+    const kept = play(
+      makeEvent({
+        id: "ev_1",
+        name: "Night one",
+        scheduledFor: "2026-03-01T19:00",
+        players: [
+          { userId: "p0", deck: snapshotDeck(riven) },
+          { userId: "p1", deck: snapshotDeck(vex) },
+        ],
+      }),
+    );
+    // Started and under way, so it would count as played if not cancelled.
+    const started = startEvent(
+      makeEvent({
+        id: "ev_2",
+        name: "Night two",
+        scheduledFor: "2026-03-08T19:00",
+        players: [
+          { userId: "p0", deck: snapshotDeck(jinx) },
+          { userId: "p1", deck: snapshotDeck(vex) },
+        ],
+      }),
+      "mgr",
+    );
+    if (!started.ok) throw new Error(started.error);
+    const cancelled = cancelEvent(started.value.event, "mgr", true);
+    if (!cancelled.ok) throw new Error(cancelled.error);
+
+    const history = leagueDeckHistory([kept, cancelled.value.event], ["p0", "p1"]);
+    expect(history.find((h) => h.userId === "p0")!.decks.map((d) => d.deckId)).toEqual([
+      "dk_riven",
+    ]);
+    expect(history.find((h) => h.userId === "p1")!.events).toBe(1);
+  });
+
   it("lists every deck a player has played, newest first", () => {
     const first = play(
       makeEvent({

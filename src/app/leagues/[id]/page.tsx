@@ -8,8 +8,8 @@ import { ActionForm } from "@/components/action-form";
 import { Badge, Card, Empty, Field, inputClass } from "@/components/ui";
 import { createEventAction } from "../../actions";
 
-const STATUS_TONE = { draft: "accent", running: "accent", complete: "win" } as const;
-const STATUS_LABEL = { draft: "Open", running: "Live", complete: "Final" } as const;
+const STATUS_TONE = { draft: "accent", running: "accent", complete: "win", cancelled: "loss" } as const;
+const STATUS_LABEL = { draft: "Open", running: "Live", complete: "Final", cancelled: "Cancelled" } as const;
 
 /** The Events tab: every event in the league, and creating new ones. */
 export default async function LeagueEventsPage(props: PageProps<"/leagues/[id]">) {
@@ -23,7 +23,8 @@ export default async function LeagueEventsPage(props: PageProps<"/leagues/[id]">
   // The layout shows the join form to non-members; render nothing here.
   if (!league.memberIds.includes(userId)) return null;
 
-  const events = await listEventsForLeague(id);
+  // Cancelled events are gone as far as the list is concerned.
+  const events = (await listEventsForLeague(id)).filter((e) => e.status !== "cancelled");
   const isManager = league.managerIds.includes(userId);
   const cfg = loadConfig();
 
@@ -103,7 +104,7 @@ export default async function LeagueEventsPage(props: PageProps<"/leagues/[id]">
           {events.map((e) => {
             const when = eventDateParts(e.scheduledFor);
             const joined = e.players.some((p) => p.userId === userId);
-            const live = e.status !== "complete";
+            const live = e.status === "draft" || e.status === "running";
             return (
               <Card
                 as="li"

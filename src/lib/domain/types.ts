@@ -80,7 +80,7 @@ export interface RegisteredDeck {
   registeredAt: string;
 }
 
-export type EventStatus = "draft" | "running" | "complete";
+export type EventStatus = "draft" | "running" | "complete" | "cancelled";
 
 export interface EventPlayer {
   userId: UserId;
@@ -168,6 +168,13 @@ export interface NexusEvent {
   createdAt: string;
   startedAt: string | null;
   completedAt: string | null;
+  /**
+   * Set when a manager called the event off before it finished. A cancelled
+   * event is treated as if it never happened: hidden from lists, history and
+   * deck stats, and left out of Elo. Only possible while its matches were the
+   * league's most recent rated ones (see `canRevertElo`).
+   */
+  cancelledAt: string | null;
 }
 
 /** Derived, never stored: computed from an event's confirmed results. */

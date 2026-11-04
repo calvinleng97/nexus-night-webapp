@@ -78,9 +78,15 @@ export function matchHistoryForEvent(event: NexusEvent, userId: UserId): MatchHi
   return out;
 }
 
-/** Every match across many events, most recent first. */
+/**
+ * Every match across many events, most recent first.
+ *
+ * Cancelled events are left out entirely, as if they never happened: no
+ * matches, and they do not count toward the event total either.
+ */
 export function matchHistory(events: NexusEvent[], userId: UserId): MatchHistoryEntry[] {
   return events
+    .filter((e) => e.status !== "cancelled")
     .flatMap((e) => matchHistoryForEvent(e, userId))
     .sort((a, b) => b.at.localeCompare(a.at));
 }
