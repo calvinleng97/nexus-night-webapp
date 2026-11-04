@@ -338,43 +338,32 @@ describe("cancelling an event", () => {
     if (!started.ok) throw new Error("setup");
     return started.value.event;
   };
-  const keep = { revertElo: false, revertAllowed: true };
-  const revert = { revertElo: true, revertAllowed: true };
 
-  it("cancels a running event and keeps its results", () => {
-    const e = resolveRound(live());
-    const res = cancelEvent(e, "mgr", keep, "2026-01-01T00:00:00.000Z");
+  it("cancels a running event", () => {
+    const res = cancelEvent(resolveRound(live()), "mgr", true, "2026-01-01T00:00:00.000Z");
     if (!res.ok) throw new Error(res.error);
     expect(res.value.event.status).toBe("cancelled");
     expect(res.value.event.cancelledAt).toBe("2026-01-01T00:00:00.000Z");
-    expect(res.value.event.eloReverted).toBe(false);
-    expect(res.value.event.rounds).toEqual(e.rounds);
   });
 
-  it("marks the Elo reverted when asked and allowed", () => {
-    const res = cancelEvent(live(), "mgr", revert);
-    if (!res.ok) throw new Error(res.error);
-    expect(res.value.event.eloReverted).toBe(true);
-  });
-
-  it("refuses a revert that later results depend on", () => {
-    expect(cancelEvent(live(), "mgr", { revertElo: true, revertAllowed: false }).ok).toBe(false);
+  it("refuses once later results build on its Elo", () => {
+    expect(cancelEvent(live(), "mgr", false).ok).toBe(false);
   });
 
   it("cancels a draft", () => {
-    expect(cancelEvent(makeEvent(4), "mgr", keep).ok).toBe(true);
+    expect(cancelEvent(makeEvent(4), "mgr", true).ok).toBe(true);
   });
 
   it("refuses a non-manager, a finished event, and a second cancel", () => {
-    expect(cancelEvent(live(), "p0", keep).ok).toBe(false);
-    expect(cancelEvent({ ...live(), status: "complete" }, "mgr", keep).ok).toBe(false);
-    const once = cancelEvent(live(), "mgr", keep);
+    expect(cancelEvent(live(), "p0", true).ok).toBe(false);
+    expect(cancelEvent({ ...live(), status: "complete" }, "mgr", true).ok).toBe(false);
+    const once = cancelEvent(live(), "mgr", true);
     if (!once.ok) throw new Error(once.error);
-    expect(cancelEvent(once.value.event, "mgr", keep).ok).toBe(false);
+    expect(cancelEvent(once.value.event, "mgr", true).ok).toBe(false);
   });
 
   it("takes no more results once cancelled", () => {
-    const res = cancelEvent(live(), "mgr", keep);
+    const res = cancelEvent(live(), "mgr", true);
     if (!res.ok) throw new Error(res.error);
     const e = res.value.event;
     const p = currentRound(e)!.pairings.find((x) => x.b !== null)!;

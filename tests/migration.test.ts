@@ -175,7 +175,6 @@ describe("store migrations", () => {
     await repo.storeReady();
     const event = (await repo.getEvent("ev_legacy"))!;
     expect(event.cancelledAt).toBeNull();
-    expect(event.eloReverted).toBe(false);
     expect(event.status).toBe("complete");
   });
 

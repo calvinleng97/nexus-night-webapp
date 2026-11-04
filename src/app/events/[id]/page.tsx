@@ -1,4 +1,4 @@
-import { canRevertElo, hasRatedMatches } from "@/lib/domain/elo";
+import { canRevertElo } from "@/lib/domain/elo";
 import { listDecksForUser, listEventsForLeague } from "@/lib/store/repo";
 import { ActionForm } from "@/components/action-form";
 import { DeckPicker } from "@/components/deck-picker";
@@ -22,8 +22,8 @@ export default async function EventRegistrationPage(props: PageProps<"/events/[i
   const myDecks = await listDecksForUser(userId);
   const open = event.status === "draft";
   const live = open || event.status === "running";
-  const rated = isManager && live && hasRatedMatches(event);
-  const revertable = rated && canRevertElo(await listEventsForLeague(event.leagueId), event.id);
+  const cancellable =
+    isManager && live && canRevertElo(await listEventsForLeague(event.leagueId), event.id);
   const dropped = myPlayer?.droppedAfterRound != null;
 
   return (
@@ -86,25 +86,18 @@ export default async function EventRegistrationPage(props: PageProps<"/events/[i
             <EventDateControl eventId={event.id} value={event.scheduledFor} />
           </div>
           <div className="flex flex-wrap items-center gap-2 border-t border-hair-soft pt-5">
-            {revertable ? (
+            {cancellable ? (
               <ActionForm
                 action={cancelEventAction}
-                fields={{ eventId: event.id, revertElo: "1" }}
-                label="Cancel & revert Elo"
+                fields={{ eventId: event.id }}
+                label="Cancel event"
                 variant="danger"
-                confirm="Cancel and undo its Elo?"
+                confirm="Cancel this event?"
                 compact
               />
-            ) : null}
-            <ActionForm
-              action={cancelEventAction}
-              fields={{ eventId: event.id }}
-              label={rated ? "Cancel, keep Elo" : "Cancel event"}
-              variant="danger"
-              confirm="Cancel this event?"
-              compact
-            />
-            {rated && !revertable ? <Tag>Elo locked</Tag> : null}
+            ) : (
+              <Tag>Elo locked</Tag>
+            )}
           </div>
         </Card>
       ) : null}

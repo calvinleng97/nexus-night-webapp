@@ -146,7 +146,6 @@ export default async function LeagueDecksPage(props: PageProps<"/leagues/[id]/de
                             </span>
                           ) : null}
                           {o.status === "running" ? <Badge tone="accent">live</Badge> : null}
-                          {o.status === "cancelled" ? <Badge tone="loss">cancelled</Badge> : null}
                           <span className="font-mono text-sm tabular-nums text-fg-dim">
                             {record(o)}
                           </span>

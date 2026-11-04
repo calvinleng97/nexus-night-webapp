@@ -15,7 +15,7 @@ import type { NexusEvent, UserId } from "./types";
  * What does not:
  *   - byes, which have no opponent to rate against
  *   - forfeits from a drop, which say nothing about how either player plays
- *   - anything in an event cancelled with its Elo reverted
+ *   - anything in a cancelled event, which counts as never having happened
  *
  * Game margin is ignored: 2-0 and 2-1 move a rating identically, the same way
  * standings treat them. The per-game scores are all on disk, so a
@@ -75,7 +75,7 @@ interface RatedMatch {
 function ratedMatches(events: NexusEvent[]): RatedMatch[] {
   const out: RatedMatch[] = [];
   for (const event of events) {
-    if (event.eloReverted) continue;
+    if (event.status === "cancelled") continue;
     const eventAt = event.startedAt ?? event.createdAt;
     for (const round of event.rounds) {
       for (const p of round.pairings) {
@@ -96,11 +96,6 @@ function ratedMatches(events: NexusEvent[]): RatedMatch[] {
     if (x.order[1] !== y.order[1]) return x.order[1] - y.order[1];
     return x.order[2].localeCompare(y.order[2]);
   });
-}
-
-/** Whether an event has any match that moves Elo (or would, unreverted). */
-export function hasRatedMatches(event: NexusEvent): boolean {
-  return ratedMatches([{ ...event, eloReverted: false }]).length > 0;
 }
 
 /**

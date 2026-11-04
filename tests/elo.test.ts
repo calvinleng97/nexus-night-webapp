@@ -51,7 +51,6 @@ function makeEvent(matches: MatchSpec[], id = "ev_1", at = "2026-01-01T00:00:00.
     startedAt: at,
     completedAt: at,
     cancelledAt: null,
-    eloReverted: false,
   };
 }
 
@@ -221,8 +220,8 @@ describe("reverting an event's Elo", () => {
   const first = makeEvent([{ a: "x", b: "y", ga: 2, gb: 0 }], "ev_1", "2026-01-01T00:00:00.000Z");
   const second = makeEvent([{ a: "y", b: "x", ga: 2, gb: 1 }], "ev_2", "2026-01-08T00:00:00.000Z");
 
-  it("drops a reverted event's matches from the ratings", () => {
-    const reverted = { ...second, status: "cancelled" as const, eloReverted: true };
+  it("drops a cancelled event's matches from the ratings", () => {
+    const reverted = { ...second, status: "cancelled" as const };
     expect(computeLeagueElo([first, reverted], ["x", "y"])).toEqual(
       computeLeagueElo([first], ["x", "y"]),
     );
@@ -245,8 +244,8 @@ describe("reverting an event's Elo", () => {
     expect(canRevertElo([first, unplayed], "ev_1")).toBe(true);
   });
 
-  it("is allowed again once the later event is itself reverted", () => {
-    const reverted = { ...second, eloReverted: true };
+  it("is allowed again once the later event is itself cancelled", () => {
+    const reverted = { ...second, status: "cancelled" as const };
     expect(canRevertElo([first, reverted], "ev_1")).toBe(true);
   });
 

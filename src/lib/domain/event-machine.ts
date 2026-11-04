@@ -387,29 +387,26 @@ export function setEventDate(
 }
 
 /**
- * Call off an event that has not finished. Confirmed results stay on record;
- * open matches are left as they are and simply never resolve.
- *
- * With `revertElo`, the event's results stop counting toward league Elo.
- * The caller decides whether that is allowed (see `canRevertElo`), since it
- * depends on the rest of the league's events.
+ * Call off an event that has not finished, as if it never happened: its
+ * results stop counting toward league Elo. The caller says whether that is
+ * still possible (see `canRevertElo`), since it depends on the rest of the
+ * league's events.
  */
 export function cancelEvent(
   event: NexusEvent,
   actorId: UserId,
-  opts: { revertElo: boolean; revertAllowed: boolean },
+  eloRevertable: boolean,
   now = new Date().toISOString(),
 ): Result<{ event: NexusEvent; warnings: string[] }> {
   if (!isManager(event, actorId)) return err("Only an event manager can cancel the event.");
   if (event.status === "complete") return err("This event has already finished.");
   if (event.status === "cancelled") return err("This event is already cancelled.");
-  if (opts.revertElo && !opts.revertAllowed)
-    return err("Later results already build on this event's Elo, so it can no longer be reverted.");
+  if (!eloRevertable)
+    return err("Later results already build on this event's Elo, so it can no longer be cancelled.");
 
   const next = structuredClone(event);
   next.status = "cancelled";
   next.cancelledAt = now;
-  next.eloReverted = opts.revertElo;
   return ok({ event: next, warnings: [] });
 }
 
@@ -440,6 +437,5 @@ export function emptyEvent(input: {
     startedAt: null,
     completedAt: null,
     cancelledAt: null,
-    eloReverted: false,
   };
 }

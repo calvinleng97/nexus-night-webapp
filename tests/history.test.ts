@@ -26,10 +26,7 @@ function runningEvent(id: string): NexusEvent {
 describe("match history", () => {
   it("leaves out cancelled events as if they never happened", () => {
     const kept = runningEvent("ev_kept");
-    const res = cancelEvent(runningEvent("ev_gone"), "mgr", {
-      revertElo: false,
-      revertAllowed: true,
-    });
+    const res = cancelEvent(runningEvent("ev_gone"), "mgr", true);
     if (!res.ok) throw new Error(res.error);
 
     const entries = matchHistory([kept, res.value.event], "p0");

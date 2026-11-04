@@ -396,7 +396,7 @@ export async function cancelEventAction(_prev: ActionState, form: FormData): Pro
   return guard(async () => {
     const userId = await requireUserId();
     const eventId = str(form, "eventId");
-    const event = await cancelEvent(eventId, userId, str(form, "revertElo") === "1");
+    const event = await cancelEvent(eventId, userId);
     revalidatePath(`/events/${eventId}`, "layout");
     revalidatePath(`/leagues/${event.leagueId}`, "layout");
     return { ok: true };
