@@ -98,6 +98,14 @@ export default async function LeaguePlayersPage(props: PageProps<"/leagues/[id]/
                       : r.draws > 0
                         ? `${r.wins}-${r.losses}-${r.draws}`
                         : `${r.wins}-${r.losses}`}
+                    {/* Phones have no Win rate column: the meter rides under the record. */}
+                    {r.games > 0 ? (
+                      <WinRate
+                        size="tile"
+                        rate={r.wins / (r.wins + r.losses + r.draws)}
+                        className="ml-auto w-12 [&>span]:mt-1.5 sm:hidden"
+                      />
+                    ) : null}
                   </td>
                   <td className={`hidden py-3 sm:table-cell ${isManager ? "pr-1" : "pr-4"}`}>
                     <WinRate

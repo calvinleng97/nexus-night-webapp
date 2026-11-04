@@ -2,12 +2,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { currentUserId } from "@/lib/auth";
 import { listDecksForUser } from "@/lib/store/repo";
-import { decklistText } from "@/lib/domain/deck";
+import { recordLabel } from "@/lib/domain/standings";
 import { ActionForm } from "@/components/action-form";
-import { CopyButton } from "@/components/copy-button";
-import { CardLink, DeckDisclosure } from "@/components/deck-view";
-import { Card, Empty, Field, LinkButton, PageHeader, inputClass } from "@/components/ui";
-import { addDeckAction, deleteDeckAction } from "../actions";
+import { DeckArt, RuneSplit } from "@/components/deck-gallery";
+import { Card, Empty, Field, LinkButton, PageHeader, Pill, WinRate, inputClass } from "@/components/ui";
+import { addDeckAction } from "../actions";
+import { deckStatsFor, winRateOf } from "./stats";
 
 const PLACEHOLDER = `Legend:
 1 Riven, The Exile
@@ -32,7 +32,7 @@ export default async function DecksPage(props: PageProps<"/decks">) {
   if (!userId) redirect("/");
   const { new: adding } = await props.searchParams;
 
-  const decks = await listDecksForUser(userId);
+  const [decks, stats] = await Promise.all([listDecksForUser(userId), deckStatsFor(userId)]);
 
   return (
     <div>
@@ -92,42 +92,41 @@ export default async function DecksPage(props: PageProps<"/decks">) {
           No decks yet.
         </Empty>
       ) : (
-        <ul className="space-y-3">
-          {decks.map((d) => (
-            <Card as="li" key={d.id} className="p-4">
-              <div className="flex flex-wrap items-start gap-3">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[1.05rem] font-semibold">{d.name}</p>
-                  {d.legend && d.legend !== d.name ? (
-                    <p className="mt-1 text-sm text-accent">
-                      <CardLink name={d.legend} legend />
-                    </p>
-                  ) : !d.legend ? (
-                    <p className="mt-1 text-sm text-fg-faint">No Legend</p>
-                  ) : null}
+        <ul className="grid gap-3 sm:grid-cols-2">
+          {decks.map((d) => {
+            const played = stats.get(d.id);
+            return (
+              <Card as="li" key={d.id} interactive className="relative overflow-hidden">
+                <DeckArt legend={d.legend} className="h-28" sizes="(min-width: 640px) 360px, 100vw" />
+                <div className="relative -mt-8 p-4 pt-0">
+                  <Link
+                    href={`/decks/${d.id}`}
+                    className="block truncate text-[1.1rem] font-bold after:absolute after:inset-0"
+                  >
+                    {d.name}
+                  </Link>
+                  <p className="mt-0.5 truncate text-sm text-accent">
+                    {d.legend ?? <span className="text-fg-faint">No Legend</span>}
+                  </p>
+                  <div className="mt-3 flex items-end gap-3">
+                    <span className="min-w-0 flex-1">
+                      <RuneSplit runes={d.runes} />
+                    </span>
+                    {played ? (
+                      <>
+                        <span className="font-mono text-sm tabular-nums text-fg-dim">
+                          {recordLabel(played)}
+                        </span>
+                        <WinRate rate={winRateOf(played)} />
+                      </>
+                    ) : (
+                      <Pill size="sm">Unplayed</Pill>
+                    )}
+                  </div>
                 </div>
-                <div className="flex shrink-0 items-start gap-2">
-                  <CopyButton
-                    text={decklistText(d)}
-                    className="!h-8 !rounded-lg !px-3 !text-[0.8rem]"
-                    label="Copy"
-                    title="Copy the decklist to import back into RiftAtlas"
-                  />
-                  <ActionForm
-                    action={deleteDeckAction}
-                    fields={{ deckId: d.id }}
-                    label="Delete"
-                    variant="ghost"
-                    size="sm"
-                    confirm="Delete?"
-                  />
-                </div>
-              </div>
-              <div className="mt-3">
-                <DeckDisclosure deck={d} label="Full list" />
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </ul>
       )}
     </div>

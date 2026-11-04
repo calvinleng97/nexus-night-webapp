@@ -1,4 +1,6 @@
-import { cardTotal, cardWikiUrl, deckSections, hasCardList } from "@/lib/domain/deck";
+import { cardImage } from "@/lib/domain/card-images";
+import { cardTotal, cardWikiUrl, deckSections } from "@/lib/domain/deck";
+import { CardPreview } from "./card-preview";
 import { deckWatchlist, type WatchCard } from "@/lib/domain/tricks";
 import type { DeckCard } from "@/lib/domain/types";
 import { MicroLabel } from "./ui";
@@ -19,7 +21,8 @@ export interface DeckLike {
 
 /**
  * A card name linked to its League wiki entry, opening in a new tab so a
- * mid-tournament lookup never costs anyone the page they were on.
+ * mid-tournament lookup never costs anyone the page they were on. When the
+ * card has a known image, hovering shows it and a tap on a phone opens it.
  */
 export function CardLink({
   name,
@@ -31,14 +34,18 @@ export function CardLink({
   legend?: boolean;
   className?: string;
 }) {
+  const href = cardWikiUrl(name, { legend });
+  const cls = `underline-offset-2 transition-colors hover:text-accent hover:underline ${className}`;
+  // Looked up here, on the server, so the card map never ships to the browser.
+  const image = cardImage(name, { legend });
+  if (image)
+    return (
+      <CardPreview href={href} name={name} {...image} className={cls}>
+        {name}
+      </CardPreview>
+    );
   return (
-    <a
-      href={cardWikiUrl(name, { legend })}
-      target="_blank"
-      rel="noopener noreferrer"
-      title={`${name} — League wiki`}
-      className={`underline-offset-2 transition-colors hover:text-accent hover:underline ${className}`}
-    >
+    <a href={href} target="_blank" rel="noopener noreferrer" title={`${name} — League wiki`} className={cls}>
       {name}
     </a>
   );
@@ -212,31 +219,5 @@ export function ExpandIcon() {
         <path d="M4 6l4 4 4-4" />
       </svg>
     </span>
-  );
-}
-
-/**
- * A collapsed full list, opened from a small labelled button. Decks whose cards were never recorded show nothing.
- */
-export function DeckDisclosure({
-  deck,
-  label = "Decklist",
-}: {
-  deck: DeckLike;
-  label?: string;
-}) {
-  if (!hasCardList(deck)) return null;
-  return (
-    <details className="group">
-      <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-lg border border-hair bg-raised px-2.5 py-1 text-xs font-medium text-fg-dim transition-colors hover:text-fg group-open:border-accent/40 group-open:text-accent">
-        {label}
-        <svg aria-hidden viewBox="0 0 16 16" className="size-3 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M4 6l4 4 4-4" />
-        </svg>
-      </summary>
-      <div className="mt-2.5">
-        <DeckListing deck={deck} />
-      </div>
-    </details>
   );
 }

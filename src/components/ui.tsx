@@ -516,7 +516,16 @@ export function WinRate({
     </span>
   );
 
-  if (size === "tile") return <span className={`block ${className}`}>{bar}</span>;
+  if (size === "tile")
+    return (
+      <span
+        role="img"
+        aria-label={rate === null ? "No rounds played" : `${pctText} win rate`}
+        className={`block ${className}`}
+      >
+        {bar}
+      </span>
+    );
 
   return (
     <span
