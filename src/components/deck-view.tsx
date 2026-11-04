@@ -1,4 +1,5 @@
 import { cardTotal, cardWikiUrl, deckSections, hasCardList } from "@/lib/domain/deck";
+import { deckWatchlist, type WatchCard } from "@/lib/domain/tricks";
 import type { DeckCard } from "@/lib/domain/types";
 import { MicroLabel } from "./ui";
 
@@ -64,6 +65,92 @@ function Section({ label, cards }: { label: string; cards: DeckCard[] }) {
   );
 }
 
+/**
+ * The chip that opens a deck's combat tricks and Hidden cards: a bolt with the
+ * trick count, a face-down card with the Hidden count. Only the chip toggles —
+ * the rest of the summary row stays an ordinary, clickable Legend link.
+ */
+function WatchToggle({ tricks, hidden }: { tricks: WatchCard[]; hidden: WatchCard[] }) {
+  return (
+    <span
+      role="button"
+      title="Combat tricks & Hidden cards"
+      className="pointer-events-auto inline-flex shrink-0 cursor-pointer items-center gap-2.5 rounded-lg border border-hair bg-raised px-2 py-1 font-mono text-xs tabular-nums text-fg-dim transition-colors hover:border-accent/40 hover:text-accent group-open/watch:border-accent/40 group-open/watch:text-accent"
+    >
+      <span className="sr-only">Combat tricks and Hidden cards</span>
+      <span aria-hidden className="inline-flex items-center gap-1">
+        <svg viewBox="0 0 16 16" className="size-3.5" fill="currentColor">
+          <path d="M9.2 1.5 3.5 9h3.7l-1 5.5L12.5 7H8.7l.5-5.5z" />
+        </svg>
+        {cardTotal(tricks)}
+      </span>
+      <span aria-hidden className="inline-flex items-center gap-1">
+        <svg viewBox="0 0 16 16" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <rect x="3.5" y="2" width="9" height="12" rx="1.5" />
+          <path d="M6 5.5l4 5M10 5.5l-4 5" strokeLinecap="round" />
+        </svg>
+        {cardTotal(hidden)}
+      </span>
+      <svg aria-hidden viewBox="0 0 16 16" className="size-3 transition-transform group-open/watch:rotate-180" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 6l4 4 4-4" />
+      </svg>
+    </span>
+  );
+}
+
+/** A tag small enough to sit inside a line of card text without growing it. */
+function MiniTag({ children, accent = false }: { children: string; accent?: boolean }) {
+  return (
+    <span
+      className={`shrink-0 rounded border px-1 font-sans text-[0.6rem] font-semibold uppercase leading-4 tracking-wider ${
+        accent ? "border-accent/35 bg-accent/10 text-accent" : "border-hair bg-raised text-fg-faint"
+      }`}
+    >
+      {children}
+    </span>
+  );
+}
+
+function WatchSection({ label, cards }: { label: string; cards: WatchCard[] }) {
+  return (
+    <div>
+      <div className="flex items-baseline gap-2">
+        <MicroLabel>{label}</MicroLabel>
+        <span className="font-mono text-[0.7rem] tabular-nums text-fg-faint/70">
+          {cardTotal(cards)}
+        </span>
+      </div>
+      {cards.length === 0 ? (
+        <p className="mt-1.5 font-mono text-[0.78rem] text-fg-faint">—</p>
+      ) : (
+        <ul className="mt-1.5 font-mono text-[0.78rem] leading-relaxed text-fg-dim">
+          {cards.map((c, i) => (
+            <li key={`${c.name}-${i}`} className="flex items-center gap-2">
+              <span className="w-5 shrink-0 text-right tabular-nums text-fg-faint">{c.count}</span>
+              <CardLink name={c.name} className="min-w-0 break-words text-fg" />
+              {c.speed ? (
+                <MiniTag accent={c.speed === "reaction"}>
+                  {c.speed === "reaction" ? "Reaction" : "Action"}
+                </MiniTag>
+              ) : null}
+              {c.sideboard ? <MiniTag>Side</MiniTag> : null}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function Watchlist({ tricks, hidden }: { tricks: WatchCard[]; hidden: WatchCard[] }) {
+  return (
+    <div className="mt-3 grid gap-5 rounded-lg border border-accent/20 bg-accent-soft/15 p-3 sm:grid-cols-2">
+      <WatchSection label="Combat tricks" cards={tricks} />
+      <WatchSection label="Hidden" cards={hidden} />
+    </div>
+  );
+}
+
 /** The full list, laid out by section. Plain text, so it can be copied out. */
 export function DeckListing({ deck }: { deck: DeckLike }) {
   const sections = deckSections(deck);
@@ -74,15 +161,27 @@ export function DeckListing({ deck }: { deck: DeckLike }) {
         the deck has since been deleted.
       </p>
     );
+  const watch = deckWatchlist(deck);
+  const hasWatch = watch.tricks.length + watch.hidden.length > 0;
   return (
     <div className="rounded-xl border border-hair-soft bg-ink p-4">
-      {deck.legend ? (
-        <div className="mb-4 border-b border-hair-soft pb-3">
-          <MicroLabel>Legend</MicroLabel>
-          <p className="mt-1 text-sm font-medium text-accent">
-            <CardLink name={deck.legend} legend />
-          </p>
-        </div>
+      {deck.legend || hasWatch ? (
+        <details className="group/watch mb-4 border-b border-hair-soft pb-3">
+          <summary className="pointer-events-none flex list-none items-start justify-between gap-3">
+            <div className="min-w-0">
+              {deck.legend ? (
+                <>
+                  <MicroLabel>Legend</MicroLabel>
+                  <p className="pointer-events-auto mt-1 w-fit text-sm font-medium text-accent">
+                    <CardLink name={deck.legend} legend />
+                  </p>
+                </>
+              ) : null}
+            </div>
+            {hasWatch ? <WatchToggle tricks={watch.tricks} hidden={watch.hidden} /> : null}
+          </summary>
+          {hasWatch ? <Watchlist tricks={watch.tricks} hidden={watch.hidden} /> : null}
+        </details>
       ) : null}
       <div className="grid gap-5 sm:grid-cols-2">
         {sections.map((s) => (
