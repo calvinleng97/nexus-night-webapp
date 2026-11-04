@@ -23,7 +23,8 @@ export default async function LeagueEventsPage(props: PageProps<"/leagues/[id]">
   // The layout shows the join form to non-members; render nothing here.
   if (!league.memberIds.includes(userId)) return null;
 
-  const events = await listEventsForLeague(id);
+  // Cancelled events are gone as far as the list is concerned.
+  const events = (await listEventsForLeague(id)).filter((e) => e.status !== "cancelled");
   const isManager = league.managerIds.includes(userId);
   const cfg = loadConfig();
 
