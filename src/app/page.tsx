@@ -1,14 +1,20 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { loadConfig } from "@/lib/config";
-import { btn } from "@/components/ui";
+import { Pill, btn } from "@/components/ui";
 import { signInAction } from "./auth-actions";
 
 /** No marketing page: signed in goes straight home. */
-export default async function RootPage() {
+export default async function RootPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
   const session = await auth();
   if (session?.user) redirect("/leagues");
   const cfg = loadConfig();
+  // Auth.js sends failed sign-ins here as /?error=<type>.
+  const failed = Boolean((await searchParams).error);
 
   return (
     <div className="flex min-h-[65dvh] flex-col items-center justify-center text-center">
@@ -16,6 +22,13 @@ export default async function RootPage() {
         ◆
       </div>
       <h1 className="mt-5 text-3xl font-bold tracking-tight">{cfg.site.name}</h1>
+      {failed ? (
+        <div className="mt-4">
+          <Pill tone="loss" dot>
+            Sign-in failed
+          </Pill>
+        </div>
+      ) : null}
       <form action={signInAction} className="mt-8 w-full max-w-xs">
         <button className={btn("solid", "lg", true)}>
           <svg aria-hidden viewBox="0 0 24 24" className="size-5">

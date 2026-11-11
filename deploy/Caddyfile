@@ -5,12 +5,24 @@
 # Replace the hostname with your own. Google OAuth will not accept a bare IP,
 # which is why this needs a real name pointing at the box.
 #
-# Logging is left to journald (journalctl -u caddy). The packaged caddy unit
+# Access logs go to journald (journalctl -u caddy). The packaged caddy unit
 # sandboxes /var/log, so a `log { output file ... }` block here fails at
-# startup with "permission denied" even after chown-ing the directory.
+# startup with "permission denied" even after chown-ing the directory; the
+# bare `log` block below writes to stderr instead. Caddy already redacts
+# Cookie and Authorization headers; the filter blanks the OAuth callback's
+# one-shot code and state so the logged URI is safe to keep.
 
 nexusnight.duckdns.org {
 	encode zstd gzip
+
+	log {
+		format filter {
+			request>uri query {
+				replace code REDACTED
+				replace state REDACTED
+			}
+		}
+	}
 
 	reverse_proxy localhost:3000 {
 		header_up X-Forwarded-Proto {scheme}
